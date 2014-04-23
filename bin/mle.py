@@ -3,10 +3,12 @@ import math
 import numpy as np
 from scipy.optimize import minimize
 
+from fcns import pc_per_dur_by_coh
+
 APPROX_ZERO = 0.0001
 
-def log_likelihood(arr, (A, B, tau)):
-	log_like = lambda row: A - (A-B)*np.exp(-row[0]*1.0/tau)
+def log_likelihood(arr, (A, B, T)):
+	log_like = lambda row: pc_per_dur_by_coh(row[0], A, B, T)
 	arr_1 = np.vstack((arr.T, map(log_like, arr))).T
 	neg_log_like = lambda row: np.log(row[2]) if row[1] else np.log(1-row[2])
 	return sum(map(neg_log_like, arr_1))

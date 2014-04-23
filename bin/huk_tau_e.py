@@ -1,10 +1,13 @@
 import math
+import logging
 
 import numpy as np
 from scipy.optimize import minimize
 
+from fcns import pc_per_dur_by_coh
 from sample import bootstrap
 
+logging.basicConfig(level=logging.DEBUG)
 BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 NBOOTS = 1000
 
@@ -15,10 +18,8 @@ def bin_data(data, bins):
 	if bins = [x_1, x_2, ..., x_n]
 		then bins like [x_1, x_2), [x_2, x_3), ...
 	"""
-	if bins[0] != 0.0:
-		bins = [0.0] + bins
-	bins.append(float("inf"))
-
+	assert bins == sorted(bins)
+	assert not(any([x for x,y in data if x < bins[0] or x > bins[-1]]))
 	data = sorted(data, key=lambda x: x[0])
 	rs_per_dur = dict((dur, []) for dur in bins)
 
@@ -34,6 +35,12 @@ def bin_data(data, bins):
 		rs_per_dur[l_bin].append(resp)
 	return rs_per_dur
 
+def binned_ps(data, durs, nboots=NBOOTS):
+	resps_per_dur = bin_data(data, durs) # 0
+	resps_per_dur = dict((dur, rs) for dur, rs in resps_per_dur.iteritems() if rs) # remove empties
+	ps = dict((dur, find_p_per_dur(rs, nboots)) for dur, rs in resps_per_dur.iteritems())
+	return ps
+
 def find_p_per_dur(rs, nboots):
 	rs = [int(r) for r in rs]
 	assert all([r in [0,1] for r in rs])
@@ -46,17 +53,8 @@ def choose_A(durs, ps):
 	durs = sorted(durs)
 	return mean([ps[dur] for dur in durs[-3:]])
 
-def p_fcn(x, A, B, tau):
-	if tau == 0 or math.isnan(tau):
-		return float('inf')
-	try:
-		return A - (A-B)*np.exp(-x*1.0/tau)
-	except:
-		print tau, x, A, B
-		return float('inf')
-
 def error(ps, A, B, tau):
-	return sum([math.pow(y - p_fcn(x, A, B, tau), 2) for x, y in ps.iteritems()])
+	return sum([math.pow(y - pc_per_dur_by_coh(x, A, B, tau), 2) for x, y in ps.iteritems()])
 
 def error_fcn(ps, A, B):
 	return lambda tau: error(ps, A, B, tau)
@@ -89,11 +87,8 @@ def huk_tau_e(data, durs=BINS, nboots=NBOOTS):
 			B = 0.5 (chance)
 		3. minimize squared error
 	"""
-	resps_per_dur = bin_data(data, durs) # 0
-	resps_per_dur = dict((dur, rs) for dur, rs in resps_per_dur.iteritems() if rs) # remove empties
-	# write_bins(resps_per_dur, 'tmp.csv')
-	ps = dict((dur, find_p_per_dur(rs, nboots)) for dur, rs in resps_per_dur.iteritems()) # 1
-	A = choose_A(resps_per_dur.keys(), ps) # 2
+	ps = binned_ps(data, durs, nboots)
+	A = choose_A(ps.keys(), ps) # 2
 	B = 0.5
 
 	bnds = [(0.0001, None)]

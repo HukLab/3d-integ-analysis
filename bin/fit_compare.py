@@ -1,11 +1,14 @@
 import os.path
+import logging
 
-from io import load_json
+from dio import load_json
 from summaries import by_coherence, as_x_y
 from mle import mle
 from mle_set_B import mle_set_B
 from mle_set_A_B import mle_set_A_B
 from huk_tau_e import huk_tau_e
+
+logging.basicConfig(level=logging.DEBUG)
 
 def write_ts(data, outfile):
 	import csv
@@ -13,12 +16,13 @@ def write_ts(data, outfile):
 		csvwriter = csv.writer(csvfile, delimiter='\t')
 		csvwriter.writerows(data)
 
-def pick_best_theta(thetas, verbose=False):
+def pick_best_theta(thetas):
 	close_enough = lambda x,y: abs(x-y) < 0.0001
 	min_th = min(thetas, key=lambda d: d['fun'])
-	if verbose:
+	if len(thetas) > 1:
 		ths = [th for th in thetas if close_enough(th['fun'], min_th['fun'])]
-		print '{0} out of {1} guesses found minima of {2}'.format(len(ths), len(thetas), min_th['fun'])
+		msg = '{0} out of {1} guesses found minima of {2}'.format(len(ths), len(thetas), min_th['fun'])
+		logging.info(msg)
 	return min_th['x']
 
 def main(subj='huk', cond='2d', coh=0.12):
@@ -29,8 +33,8 @@ def main(subj='huk', cond='2d', coh=0.12):
 	trials = by_coherence(TRIALS, (subj, cond), coh)
 	ts = as_x_y(trials)
 	# write_ts(ts, OUTFILE)
-	print '{0} trials total'.format(len(ts))
-	print '----------'
+	msg = '{0} trials total'.format(len(ts))
+	logging.info(msg)
 	
 	# print 'HUK'
 	# thetas_huk, A = huk_tau_e(ts) # might want to use actual bins for this session rather than the default

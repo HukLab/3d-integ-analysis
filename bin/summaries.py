@@ -1,20 +1,21 @@
 import os.path
+import logging
 from itertools import groupby
 import csv
 
-from io import load_json
+from dio import load_json
 from sample import bootstrap
 
 session_grouper = lambda t: (t.session.subject, t.session.dotmode)
 coherence_grouper = lambda t: t.coherence
 duration_grouper = lambda t: t.duration_index
 raw_duration_grouper = lambda t: t.duration
-def group_trials(trials, keyfunc, print_summary=False):
+def group_trials(trials, keyfunc, verbose=False):
 	trials = sorted(trials, key=keyfunc)
 	groups = {}
 	for k, g in groupby(trials, keyfunc):
 		groups[k] = list(g)
-	if print_summary:
+	if verbose:
 		for k in groups:
 			print k, len(groups[k])
 	assert len(trials) == sum([len(x) for x in groups.values()])
