@@ -1,9 +1,12 @@
 import math
+import logging
 
 import numpy as np
 from scipy.optimize import minimize
 
 from mle import APPROX_ZERO, log_likelihood
+
+logging.basicConfig(level=logging.DEBUG)
 
 def log_likelihood_fcn(data, A, B):
 	return lambda theta: -log_likelihood(data, (A, B, theta[0]))
@@ -18,7 +21,7 @@ def decide_to_keep(theta, ymin):
 	return False
 
 def get_guesses():
-	return  [i/20.0 for i in xrange(1, 20)]
+	return  [10, 50, 100, 250, 500, 1000]
 
 def mle_set_A_B(data, A=0.902, B=0.5, quick=False):
 	"""
@@ -33,11 +36,12 @@ def mle_set_A_B(data, A=0.902, B=0.5, quick=False):
 	ymin = float('inf')
 	for guess in get_guesses():
 		# bounds only for: L-BFGS-B, TNC, SLSQP
-		theta = minimize(log_likelihood_fcn(data, A, B), guess, method='L-BFGS-B', bounds=bnds)
+		theta = minimize(log_likelihood_fcn(data, A, B), guess, method='TNC', bounds=bnds)
 		if decide_to_keep(theta, ymin):
 			ymin = theta['fun']
 			thetas.append(theta)
 			if quick:
 				return thetas
-			print theta['x'], theta['fun']
+			msg = '{0}, {1}'.format(theta['x'], theta['fun'])
+			logging.info(msg)
 	return thetas

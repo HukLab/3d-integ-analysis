@@ -12,6 +12,7 @@ from fit_compare import pick_best_theta
 from summaries import group_trials, session_grouper, coherence_grouper, as_x_y
 from huk_tau_e import binned_ps, BINS
 from mle_set_B import mle_set_B
+from mle import mle
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -49,23 +50,28 @@ def fit_curves(trials, bins, b=0.5):
 	groups = group_trials(trials, coherence_grouper, False)
 	cohs = sorted(groups)
 	results = {}
+
 	for coh in cohs:
-		if coh < 0.9:
-			continue
 		ts = groups[coh]
 		ts_cur_coh = as_x_y(ts)
+
 		ths = mle_set_B(ts_cur_coh, B=b, quick=True)
 		if ths:
 			th = pick_best_theta(ths)
 		else:
-			msg = 'No fits found. Using alpha=1.0, tau=0.0001'
-			logging.warning(msg)
-			th = [1.0, 0.001]
+			msg = 'No fits found with fixed B={0}. Letting B vary.'.format(b)
+			logging.info(msg)
+			ths = mle(ts_cur_coh, quick=True)
+			if not ths:
+				ths = mle_set_A_B(ts_cur_coh, quick=True)
+				msg = 'No fits found. Using alpha=1.0, tau=0.0001'
+				logging.warning(msg)
+				th = [1.0, 0.001]
 		ps = binned_ps(ts_cur_coh, bins)
 		msg = '{0}%: {1}'.format(int(coh*100), th)
 		logging.info(msg)
 		results[coh] = {}
-		results[coh]['theta'] = {'A': th[0], 'B': b, 'T': th[-1]}
+		results[coh]['theta'] = {'A': th[0], 'B': b if len(th) == 2 else th[1], 'T': th[-1]}
 		results[coh]['ps'] = ps
 	return results
 
@@ -122,20 +128,18 @@ def main():
 	"""
 	NO FITS:
 		klb 2d: 100%
-		huk 3d: 0% --> fixed by run with TNC solver
 		lkc 3d: 100%
 		krm 2d: 50%, 100%
-
-	What about plotting, for each coh, the time it takes fcn to get to X% of (A-B)? 
+		huk 3d: 0% --> fixed by run with TNC solver
 	"""
 	CURDIR = os.path.dirname(os.path.abspath(__file__))
 	BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
 	INFILE = os.path.join(BASEDIR, 'data.json')
-	OUTDIR = os.path.join(BASEDIR, 'res')
+	OUTDIR = os.path.join(BASEDIR, 'res', 'pc_per_dur_by_coh-ms')
 	TRIALS = load_json(INFILE)
 	groups = group_trials(TRIALS, session_grouper, False)
 
-	subjs = ['klb'] # ['krm', 'klb', 'lkc', 'lnk', 'ktz', 'huk']
+	subjs = ['krm'] # ['krm', 'klb', 'lkc', 'lnk', 'ktz', 'huk']
 	conds = ['2d'] # ['2d', '3d']
 	for subj in subjs:
 		for cond in conds:

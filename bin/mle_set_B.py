@@ -24,7 +24,7 @@ def decide_to_keep(theta, ymin):
 
 def get_guesses():
 	ags =  [i/10.0 for i in xrange(1, 10)]
-	tgs = [0.02, 0.05] + [i/10.0 for i in xrange(1, 10)]
+	tgs = [10, 50, 100, 250, 500, 1000]
 	guesses = [(a, t) for a in ags for t in tgs]
 	return guesses
 

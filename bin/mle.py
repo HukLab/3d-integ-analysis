@@ -18,7 +18,7 @@ def log_likelihood_fcn(data):
 
 def get_guesses():
 	ags =  [i/10.0 for i in xrange(1, 10)]
-	bgs =  [i/10.0 for i in xrange(1, 10)]
+	bgs = [10, 50, 100, 250, 500, 1000]
 	tgs = [i/10.0 for i in xrange(1, 10)] # no clue yet
 
 	# ags = [0.9]
@@ -54,15 +54,12 @@ def mle(data, quick=False):
 	ymin = float('inf')
 	for guess in get_guesses():
 		# bounds only for: L-BFGS-B, TNC, SLSQP
-		theta = minimize(log_likelihood_fcn(data), guess, method='L-BFGS-B', bounds=bnds, constraints=cons)
+		theta = minimize(log_likelihood_fcn(data), guess, method='TNC', bounds=bnds, constraints=cons)
 		if decide_to_keep(theta, ymin):
 			ymin = theta['fun']
 			thetas.append(theta)
-			print theta['x'], theta['fun']
 			if quick:
 				return thetas
+			msg = '{0}, {1}'.format(theta['x'], theta['fun'])
+			logging.info(msg)
 	return thetas
-
-"""
-TO DO: fit bootstrapped data, using the theta of the base data as the initial guess for the bootstraps
-"""
