@@ -199,41 +199,50 @@ def make_curves(subj, cond, trials, bins, outdir):
     trials = sample_trials_by_session(trials, cond)
     curves_for_session(trials, bins, subj, cond, outfiles(outdir, subj, cond))
 
-def get_groups(outdirname, grouper_fcn):
-    CURDIR = os.path.dirname(os.path.abspath(__file__))
-    BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
-    INFILE = os.path.join(BASEDIR, 'data.json')
-    OUTDIR = os.path.join(BASEDIR, 'res', outdirname)
-    TRIALS = load_json(INFILE)
-    return group_trials(TRIALS, grouper_fcn, False)
-
-def by_subject(conds, bins, outdir):
-    """
-    NO FITS:
-        klb 2d: 100%
-        krm 2d: 50%, 100%
-        lkc 3d: 100%
-        huk 3d: 0% --> fixed by run with TNC solver
-    """
-    groups = get_groups('BY_SUBJ_2', session_grouper)
+def by_subject(trials, conds, bins, outdir):
+    groups = group_trials(trials, session_grouper, False)
     for cond in conds:
         for subj in good_subjects[cond]:
             trials = groups[(subj, cond)]
             make_curves(subj, cond, trials, bins, outdir)
 
-def across_subjects(conds, bins, outdir):
-    groups = get_groups('ALL_GOOD_2', dot_grouper)
+def across_subjects(trials, conds, bins, outdir):
+    groups = group_trials(trials, dot_grouper, False)
     subj = 'ALL'
     for cond in conds:
         trials = groups[cond]
         make_curves(subj, cond, trials, bins, outdir)
 
+def main(outdir, kind, conds, bins):
+    CURDIR = os.path.dirname(os.path.abspath(__file__))
+    BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
+    INFILE = os.path.join(BASEDIR, 'data.json')
+    OUTDIR = os.path.join(BASEDIR, 'res', outdirname)
+    TRIALS = load_json(INFILE)
+    if kind == 'ALL':
+        across_subjects(TRIALS, conds, bins, OUTDIR)
+    elif kind == 'SUBJECT':
+        by_subject(TRIALS, conds, bins, OUTDIR)
+    else:
+        msg = "kind {0} not recognized".format(kind)
+        logging.error(msg)
+        raise Exception(msg)
+
 if __name__ == '__main__':
     conds = ['2d'] # ['2d', '3d']
-    # across_subjects(conds, BINS, OUTDIR)
-    by_subject(conds, BINS, OUTDIR)
+    outdir = 'BY_SUBJ_2'
+    kind = 'SUBJECT'
+    # outdir = 'ALL_GOOD_2'
+    # kind = 'ALL'
+    main(outdir, kind, conds, BINS)
 
 """
+ NO FITS:
+    klb 2d: 100%
+    krm 2d: 50%, 100%
+    lkc 3d: 100%
+    huk 3d: 0% --> fixed by run with TNC solver
+
 * MLE: bad at curves with lots of p~1
 * MLE: shouldn't always take first guess
 * B=0.5 not always true
