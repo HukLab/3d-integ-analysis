@@ -46,7 +46,7 @@ def mle(data, quick=False):
 		dur is floar
 		resp is True/False
 	"""
-	data = np.array([(x,int(y)) for x,y in data])
+	# data = np.array([(x, int(y)) for x,y in data])
 	bnds = [(APPROX_ZERO, 1.0-APPROX_ZERO), (APPROX_ZERO, 1.0-APPROX_ZERO), (APPROX_ZERO, None)]
 	cons = [{'type': 'ineq', 'fun': lambda theta: theta[0] - theta[1] - APPROX_ZERO}] # A > B
 

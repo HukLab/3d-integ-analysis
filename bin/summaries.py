@@ -1,12 +1,15 @@
 import os.path
 import logging
 from itertools import groupby
+import numpy as np
 import csv
 
 from dio import load_json
 from sample import bootstrap
 
 session_grouper = lambda t: (t.session.subject, t.session.dotmode)
+subj_grouper = lambda t: t.session.subject
+dot_grouper = lambda t: t.session.dotmode
 coherence_grouper = lambda t: t.coherence
 duration_grouper = lambda t: t.duration_index
 raw_duration_grouper = lambda t: t.duration
@@ -22,7 +25,7 @@ def group_trials(trials, keyfunc, verbose=False):
 	return groups
 
 def as_x_y(trials):
-	return [(t.duration, int(t.correct)) for t in trials]
+	return np.array([(t.duration, int(t.correct)) for t in trials])
 
 def by_coherence(trials, (subj, mode), coh):
 	groups = group_trials(trials, session_grouper, False)

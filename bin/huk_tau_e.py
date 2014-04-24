@@ -4,11 +4,11 @@ import logging
 import numpy as np
 from scipy.optimize import minimize
 
+from session_info import BINS
 from fcns import pc_per_dur_by_coh
 from sample import bootstrap
 
 logging.basicConfig(level=logging.DEBUG)
-BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 NBOOTS = 1000
 
 mean = lambda xs: sum(x for x in xs)*1.0/len(xs)
@@ -60,7 +60,7 @@ def error_fcn(ps, A, B):
 	return lambda tau: error(ps, A, B, tau)
 
 def get_guesses():
-	return [i/10.0 for i in xrange(1, 20)]
+	return [10, 50, 100, 250, 500, 1000]
 
 def write_bins(d, outfile):
 	import csv
@@ -70,7 +70,7 @@ def write_bins(d, outfile):
 			rows = [[dur, r] for r in rs]
 			csvwriter.writerows(rows)
 
-def huk_tau_e(data, durs=BINS, nboots=NBOOTS):
+def huk_tau_e(data, B=0.5, durs=BINS, nboots=NBOOTS):
 	"""
 	data is list [(dur, resp), ...]
 		dur is floar
@@ -89,7 +89,6 @@ def huk_tau_e(data, durs=BINS, nboots=NBOOTS):
 	"""
 	ps = binned_ps(data, durs, nboots)
 	A = choose_A(ps.keys(), ps) # 2
-	B = 0.5
 
 	bnds = [(0.0001, None)]
 	thetas = []

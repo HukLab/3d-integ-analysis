@@ -23,13 +23,17 @@ def decide_to_keep(theta, ymin):
 def get_guesses():
 	return  [10, 50, 100, 250, 500, 1000]
 
-def mle_set_A_B(data, A=0.902, B=0.5, quick=False):
+def mle_set_A_B(data, A=None, B=0.5, quick=False):
 	"""
 	data is list [(dur, resp)]
 		dur is floar
 		resp is True/False
 	"""
-	data = np.array([(x,int(y)) for x,y in data])
+	# data = np.array([(x,int(y)) for x,y in data])
+	if A is None:
+		msg = 'A not supplied to mle_set_A_B'
+		logging.error(msg)
+		raise Exception(msg)
 	bnds = [(APPROX_ZERO, None)]
 
 	thetas = []

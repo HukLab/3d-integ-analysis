@@ -25,6 +25,7 @@ def decide_to_keep(theta, ymin):
 def get_guesses():
 	ags =  [i/10.0 for i in xrange(1, 10)]
 	tgs = [10, 50, 100, 250, 500, 1000]
+	tgs.reverse()
 	guesses = [(a, t) for a in ags for t in tgs]
 	return guesses
 
@@ -34,7 +35,7 @@ def mle_set_B(data, B=0.5, quick=False):
 		dur is floar
 		resp is True/False
 	"""
-	data = np.array([(x,int(y)) for x,y in data])
+	# data = np.array([(x,int(y)) for x,y in data])
 	bnds = [(APPROX_ZERO, 1.0-APPROX_ZERO), (APPROX_ZERO, None)]
 	cons = [{'type': 'ineq', 'fun': lambda theta: theta[0] - B}] # A > B
 
