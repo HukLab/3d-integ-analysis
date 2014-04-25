@@ -6,6 +6,8 @@ from json import JSONEncoder
 
 from trial import Trial, Session
 
+makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, '{0}-{1}-{2}.{3}'.format(subj, cond, name, ext))
+
 class MyEncoder(JSONEncoder):
     def default(self, o):
         return o.__dict__
@@ -35,7 +37,8 @@ def load(data):
         session_index = ps['session_number']
     else:
         session_index = parse_filename(infile)[-1]
-    session = Session(ps['subj'], ps['dotmode'], ps['binEdges'], session_index)
+    subj_map = lambda x: x if x != 'ktz' else 'lnk' # KTZ -> LNK
+    session = Session(subj_map(ps['subj']), ps['dotmode'], ps['binEdges'], session_index)
 
     trials = []
     for tr, coh, dirc, durIdx, dur, resp, crct in data['D']:
@@ -67,12 +70,12 @@ def mat_to_json(datadir, outfile):
     return len(trials)
 
 if __name__ == '__main__':
-    basedir = '/Users/mobeets/Dropbox/Work/Huk/temporalIntegration'
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    basedir = os.path.abspath(os.path.join(curdir, '..'))
     datadir = os.path.join(basedir, 'json')
     outfile = os.path.join(basedir, 'data-2.json')
-    ntrials = mat_to_json(datadir, outfile)
 
-    # outfile = os.path.join(basedir, 'data-2.json')
+    ntrials = mat_to_json(datadir, outfile)
     xs = load_json(outfile)
     assert len(xs) == ntrials
     print 'SUCCESS'

@@ -1,13 +1,10 @@
 import csv
 import json
+import pickle
 import os.path
 import logging
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-from dio import load_json
-from fcns import pc_per_dur_by_coh
+from dio import load_json, makefn
 from session_info import BINS, good_subjects, bad_sessions, good_cohs, bad_cohs
 from fit_compare import pick_best_theta
 from sample import sample_wr
@@ -18,11 +15,14 @@ from mle import mle
 
 logging.basicConfig(level=logging.DEBUG)
 
-def write_fit_json(results, bins, outfile):
+def pickle_fit(results, bins, outfile, subj, cond):
     out = {}
-    out['results'] = results
-    out['duration_bins'] = bins
-    json.dump(out, open(outfile, 'w'))
+    out['fits'] = results
+    out['bins'] = bins
+    out['subj'] = subj
+    out['cond'] = cond
+    pickle.dump(out, open(outfile, 'w'))
+    json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4) # note: not invertible since numeric key -> str
 
 def write_fit_csv(results, bins, outfile):
     with open(outfile, 'wb') as csvfile:
@@ -46,66 +46,13 @@ def write_fit_csv(results, bins, outfile):
         for dur in bins:
             row = [dur]
             for coh in cohs:
-                d = results[coh]['ps']
+                d = results[coh]['binned']
                 if dur in d:
                     val = d[dur]
                 else:
                     val = 'N/A'
                 row.append(val)
             csvwriter.writerow(row)
-
-def tau_curve(results, bins, outfile):
-    get_tau = lambda coh, name: results[coh][name]['T']
-    taus_mle = [get_tau(coh, 'mle') for coh in results]
-    taus_huk = [get_tau(coh, 'huk') for coh in results]
-    plt.clf()
-    plt.title('Time constants per coherence')
-    plt.xlabel('coherence')
-    plt.ylabel('tau (ms)')
-    xs = results.keys()
-    plt.plot(xs, taus_mle, 'ro', label='MLE')
-    plt.plot(xs, taus_huk, 'go', label='HUK')
-    plt.xscale('log')
-    # plt.legend()
-    try:
-        plt.tight_layout()
-    except:
-        pass
-    # plt.show()
-    plt.savefig(outfile)
-
-def make_curves(results, bins, outfile):
-    min_dur, max_dur = min(bins), max(bins)
-    xs = np.linspace(min_dur, max_dur)
-    yf = lambda x, th: pc_per_dur_by_coh(x, th['A'], th['B'], th['T'])
-
-    cohs = sorted(results.keys())
-    nrows = 3
-    ncols = int((len(cohs)-0.5)/nrows)+1
-    sec_to_ms = lambda xs: [x*1000 for x in xs]
-
-    plt.clf()
-    for i, coh in enumerate(cohs):
-        plt.subplot(ncols, nrows, i+1)
-        plt.title('{0}% coherence'.format(int(coh*100)))
-        plt.xlabel('duration (ms)')
-        plt.ylabel('% correct')
-        ys_mle = yf(xs, results[coh]['mle'])
-        ys_huk = yf(xs, results[coh]['huk'])
-        xs_binned, ys_binned = zip(*results[coh]['ps'].iteritems())
-        plt.plot(sec_to_ms(xs), ys_mle, 'r-', label='MLE')
-        plt.plot(sec_to_ms(xs), ys_huk, 'g-', label='HUK')
-        plt.plot(sec_to_ms(xs_binned), ys_binned, 'o')
-        plt.xscale('log')
-        # plt.xlim()
-        plt.ylim(0.2, 1.1)
-    # plt.legend()
-    try:
-        plt.tight_layout()
-    except:
-        pass
-    # plt.show()
-    plt.savefig(outfile)
 
 def mle_fit(ts, B, bins, coh, quick=True):
     ths = mle_set_B(ts, B=B, quick=quick)
@@ -133,7 +80,7 @@ def huk_fit(ts, B, bins, coh):
         th = 0.001
     msg = '{0}% HUK: {1}'.format(int(coh*100), th)
     logging.info(msg)
-    return {'A': A, 'B': B, 'T': th}
+    return {'A': A, 'B': B, 'T': th[0]}
 
 def fit_curves(trials, bins, B=0.5):
     groups = group_trials(trials, coherence_grouper, False)
@@ -146,24 +93,19 @@ def fit_curves(trials, bins, B=0.5):
         results[coh] = {}
         results[coh]['mle'] = mle_fit(ts_cur_coh, B, bins, coh)
         results[coh]['huk'] = huk_fit(ts_cur_coh, B, bins, coh)
-        results[coh]['ps'] = binned_ps(ts_cur_coh, bins)
+        results[coh]['binned'] = binned_ps(ts_cur_coh, bins)
         results[coh]['ntrials'] = len(ts_cur_coh)
     return results
 
-def curves_for_session(trials, bins, subj, cond, outfiles):
+def curves_for_session(trials, bins, subj, cond, pickle_outfile):
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(trials), subj, cond)
     logging.info(msg)
     if not trials:
         logging.info('No graphs.')
         return
     results = fit_curves(trials, bins)
-    make_curves(results, bins, outfiles['fit'])
-    tau_curve(results, bins, outfiles['tau'])
-    # write_fit_json(results, bins, outfiles['json'])
-
-def outfiles(outdir, subj, cond):
-    makefn = lambda name, ext: os.path.join(outdir, '{0}-{1}-{2}.{3}'.format(subj, cond, name, ext))
-    return {'fit': makefn('fit', 'png'), 'tau': makefn('tau', 'png'), 'json': makefn('fit', 'json')}
+    pickle_fit(results, bins, pickle_outfile, subj, cond)
+    return results
 
 def remove_bad_trials_by_session(trials, cond):
     """ assumes filtering already done by cond """
@@ -193,31 +135,35 @@ def remove_trials_by_coherence(trials, cond):
         cohs = good_cohs[cond]
         return [t for t in trials if t.coherence in cohs]
 
-def make_curves(subj, cond, trials, bins, outdir):
+def fit(subj, cond, trials, bins, outfile, resample=False):
     trials = remove_bad_trials_by_session(trials, cond)
     trials = remove_trials_by_coherence(trials, cond)
-    trials = sample_trials_by_session(trials, cond)
-    curves_for_session(trials, bins, subj, cond, outfiles(outdir, subj, cond))
+    if resample:
+        trials = sample_trials_by_session(trials, cond)
+    return curves_for_session(trials, bins, subj, cond, outfile)
 
 def by_subject(trials, conds, bins, outdir):
     groups = group_trials(trials, session_grouper, False)
+    results = {}
     for cond in conds:
         for subj in good_subjects[cond]:
             trials = groups[(subj, cond)]
-            make_curves(subj, cond, trials, bins, outdir)
+            outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
+            fit(subj, cond, trials, bins, outfile)
 
 def across_subjects(trials, conds, bins, outdir):
     groups = group_trials(trials, dot_grouper, False)
     subj = 'ALL'
     for cond in conds:
         trials = groups[cond]
-        make_curves(subj, cond, trials, bins, outdir)
+        outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
+        fit(subj, cond, trials, bins, outfile, resample=True)
 
-def main(outdir, kind, conds, bins):
+def main(conds, kind, outdir, bins):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     INFILE = os.path.join(BASEDIR, 'data.json')
-    OUTDIR = os.path.join(BASEDIR, 'res', outdirname)
+    OUTDIR = os.path.join(BASEDIR, 'res', outdir)
     TRIALS = load_json(INFILE)
     if kind == 'ALL':
         across_subjects(TRIALS, conds, bins, OUTDIR)
@@ -229,12 +175,11 @@ def main(outdir, kind, conds, bins):
         raise Exception(msg)
 
 if __name__ == '__main__':
-    conds = ['2d'] # ['2d', '3d']
-    outdir = 'BY_SUBJ_2'
+    conds = ['2d', '3d'] # ['2d', '3d']
     kind = 'SUBJECT'
-    # outdir = 'ALL_GOOD_2'
-    # kind = 'ALL'
-    main(outdir, kind, conds, BINS)
+    kind = 'ALL'
+    outdir = 'fits'
+    main(conds, kind, outdir, BINS)
 
 """
  NO FITS:
@@ -249,7 +194,7 @@ if __name__ == '__main__':
     * sometimes there is obviously a delay, i.e. 0.5 extends up until some duration t'
 
 TO DO:
-    * finer bins for all
+    * finer bins for ALL
     * fit taus with line
     * 2d and 3d on same plot
     * re-gen for ALL
