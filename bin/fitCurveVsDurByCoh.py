@@ -4,6 +4,8 @@ import pickle
 import os.path
 import logging
 
+import numpy as np
+
 from dio import load_json, makefn
 from session_info import BINS, good_subjects, bad_sessions, good_cohs, bad_cohs
 from fit_compare import pick_best_theta
@@ -97,7 +99,7 @@ def fit_curves(trials, bins, B=0.5):
         results[coh]['ntrials'] = len(ts_cur_coh)
     return results
 
-def curves_for_session(trials, bins, subj, cond, pickle_outfile):
+def fit_session_curves(trials, bins, subj, cond, pickle_outfile):
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(trials), subj, cond)
     logging.info(msg)
     if not trials:
@@ -140,7 +142,7 @@ def fit(subj, cond, trials, bins, outfile, resample=False):
     trials = remove_trials_by_coherence(trials, cond)
     if resample:
         trials = sample_trials_by_session(trials, cond)
-    return curves_for_session(trials, bins, subj, cond, outfile)
+    return fit_session_curves(trials, bins, subj, cond, outfile)
 
 def by_subject(trials, conds, bins, outdir):
     groups = group_trials(trials, session_grouper, False)
@@ -159,16 +161,18 @@ def across_subjects(trials, conds, bins, outdir):
         outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
         fit(subj, cond, trials, bins, outfile, resample=True)
 
-def main(conds, kind, outdir, bins):
+def main(conds, kind, outdir):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     INFILE = os.path.join(BASEDIR, 'data.json')
     OUTDIR = os.path.join(BASEDIR, 'res', outdir)
     TRIALS = load_json(INFILE)
     if kind == 'ALL':
+        # 100 bins! why not?
+        bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 100))
         across_subjects(TRIALS, conds, bins, OUTDIR)
     elif kind == 'SUBJECT':
-        by_subject(TRIALS, conds, bins, OUTDIR)
+        by_subject(TRIALS, conds, BINS, OUTDIR)
     else:
         msg = "kind {0} not recognized".format(kind)
         logging.error(msg)
@@ -176,10 +180,10 @@ def main(conds, kind, outdir, bins):
 
 if __name__ == '__main__':
     conds = ['2d', '3d'] # ['2d', '3d']
-    kind = 'SUBJECT'
+    # kind = 'SUBJECT'
     kind = 'ALL'
-    outdir = 'fits'
-    main(conds, kind, outdir, BINS)
+    outdir = 'fits-fine'
+    main(conds, kind, outdir)
 
 """
  NO FITS:
@@ -194,9 +198,9 @@ if __name__ == '__main__':
     * sometimes there is obviously a delay, i.e. 0.5 extends up until some duration t'
 
 TO DO:
+    * re-gen for ALL
+    * re-gen for SUBJ
     * finer bins for ALL
     * fit taus with line
     * 2d and 3d on same plot
-    * re-gen for ALL
-    * re-gen for SUBJ
 """

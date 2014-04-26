@@ -2,9 +2,9 @@ BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 
 good_subjects = {
     '2d': ['huk', 'lnk'],
-    '3d': ['huk', 'ktz', 'lkc'],
+    '3d': ['huk', 'lnk', 'lkc'],
     # '2d': ['huk', 'klb', 'krm', 'lnk'],
-    # '3d': ['huk', 'klb', 'krm', 'ktz', 'lkc'],
+    # '3d': ['huk', 'klb', 'krm', 'lnk', 'lkc'],
 }
 
 bad_sessions = {
@@ -18,7 +18,7 @@ bad_sessions = {
         'huk': [],
         'klb': [],
         'krm': [],
-        'ktz': [5],
+        'lnk': [5],
         'lkc': [],
     }
 }
