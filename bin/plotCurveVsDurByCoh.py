@@ -1,6 +1,7 @@
 import pickle
 import os.path
 import logging
+import argparse
 from itertools import chain
 
 import numpy as np
@@ -59,7 +60,8 @@ def tau_curve(xss, yss, colors, markers, linestyles, labels, outfile):
     for xs, ys, col, mkr, lin, lbl in zip(xss, yss, colors, markers, linestyles, labels):
         plt.plot(xs, ys, color=col, linestyle=lin, marker=mkr, label=lbl)
     plt.xscale('log')
-    plt.yscale('log')
+    # plt.yscale('log')
+    plt.ylim(0, 1200)
     # plt.legend()
     try:
         plt.tight_layout()
@@ -146,10 +148,16 @@ def main(conds, subjs_by_cond, indir, outdir):
             outfile = makefn(OUTDIR, subj, 'both', 'tau', 'png')
             tau_curve_both_conds(results_both, outfile)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
+parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
+parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
+parser.add_argument('-k', "--kind", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'], help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
+args = parser.parse_args()
+
 if __name__ == '__main__':
-    conds = ['2d', '3d']
-    subjs = dict((cond, good_subjects[cond]) for cond in conds)
-    # subjs = dict((cond, ['ALL']) for cond in conds)
-    indir = 'fits'
-    outdir = 'plots'
-    main(conds, subjs, indir, outdir)
+    if args.kind == 'SUBJECT':
+        subjs = dict((cond, good_subjects[cond]) for cond in args.conds)
+    else:
+        subjs = dict((cond, ['ALL']) for cond in args.conds)
+    main(args.conds, subjs, args.indir, args.outdir)

@@ -3,6 +3,7 @@ import json
 import pickle
 import os.path
 import logging
+import argparse
 
 import numpy as np
 
@@ -169,7 +170,8 @@ def main(conds, kind, outdir):
     TRIALS = load_json(INFILE)
     if kind == 'ALL':
         # 100 bins! why not?
-        bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 100))
+        bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 50))
+        bins[0] = BINS[0]
         across_subjects(TRIALS, conds, bins, OUTDIR)
     elif kind == 'SUBJECT':
         by_subject(TRIALS, conds, BINS, OUTDIR)
@@ -178,29 +180,25 @@ def main(conds, kind, outdir):
         logging.error(msg)
         raise Exception(msg)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
+parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
+parser.add_argument('-k', "--kind", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'], help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
+args = parser.parse_args()
+
 if __name__ == '__main__':
-    conds = ['2d', '3d'] # ['2d', '3d']
-    # kind = 'SUBJECT'
-    kind = 'ALL'
-    outdir = 'fits-fine'
-    main(conds, kind, outdir)
+    main(args.conds, args.kind, args.outdir)
 
 """
- NO FITS:
-    klb 2d: 100%
-    krm 2d: 50%, 100%
-    lkc 3d: 100%
-    huk 3d: 0% --> fixed by run with TNC solver
-
-* MLE: bad at curves with lots of p~1
-* MLE: shouldn't always take first guess
 * B=0.5 not always true
     * sometimes there is obviously a delay, i.e. 0.5 extends up until some duration t'
+* MLE: bad at curves with lots of p~1
+* MLE: shouldn't always take first guess
 
 TO DO:
-    * re-gen for ALL
-    * re-gen for SUBJ
-    * finer bins for ALL
-    * fit taus with line
-    * 2d and 3d on same plot
+    x re-gen for ALL
+    x re-gen for SUBJ
+    x finer bins for ALL
+    x 2d and 3d on same plot
+    o fit taus with line
 """
