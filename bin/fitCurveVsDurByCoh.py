@@ -1,4 +1,3 @@
-import csv
 import json
 import pickle
 import os.path
@@ -8,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import BINS, good_subjects, bad_sessions, good_cohs, bad_cohs
+from session_info import DEFAULT_THETA, BINS, good_subjects, bad_sessions, good_cohs, bad_cohs
 from fit_compare import pick_best_theta
 from sample import sample_wr
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y
@@ -19,43 +18,16 @@ from mle import mle
 logging.basicConfig(level=logging.DEBUG)
 
 def pickle_fit(results, bins, outfile, subj, cond):
+    """
+    n.b. json output is just for human-readability; it's not invertible since numeric keys become str
+    """
     out = {}
     out['fits'] = results
     out['bins'] = bins
     out['subj'] = subj
     out['cond'] = cond
     pickle.dump(out, open(outfile, 'w'))
-    json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4) # note: not invertible since numeric key -> str
-
-def write_fit_csv(results, bins, outfile):
-    with open(outfile, 'wb') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter='\t')
-        th_keys = ['A', 'B', 'T']
-        header = ['coh'] + th_keys + bins
-
-        cohs = sorted(results.keys())
-        header = ['cohs:'] + cohs
-        csvwriter.writerow(header)
-
-        # write thetas per coh
-        for key in th_keys:
-            row = [key]
-            for coh in cohs:
-                val = results[coh]['mle'][key]
-                row.append(val)
-            csvwriter.writerow(row)
-
-        # write binned ps per coh
-        for dur in bins:
-            row = [dur]
-            for coh in cohs:
-                d = results[coh]['binned']
-                if dur in d:
-                    val = d[dur]
-                else:
-                    val = 'N/A'
-                row.append(val)
-            csvwriter.writerow(row)
+    json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
 def mle_fit(ts, B, bins, coh, quick=True):
     ths = mle_set_B(ts, B=B, quick=quick)
@@ -66,9 +38,9 @@ def mle_fit(ts, B, bins, coh, quick=True):
         # logging.info(msg)
         # ths = mle(ts, quick=True)
         if not ths:
-            msg = 'No fits found. Using alpha=1.0, tau=0.0001'
+            msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
             logging.warning(msg)
-            th = [1.0, 0.001]
+            th = [DEFAULT_THETA['A'], DEFAULT_THETA['T']]
     msg = '{0}% MLE: {1}'.format(int(coh*100), th)
     logging.info(msg)
     return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}
@@ -80,12 +52,12 @@ def huk_fit(ts, B, bins, coh):
     else:
         msg = 'No fits found for Huk Using tau=0.0001.'
         logging.warning(msg)
-        th = 0.001
+        th = [DEFAULT_THETA['T']]
     msg = '{0}% HUK: {1}'.format(int(coh*100), th)
     logging.info(msg)
     return {'A': A, 'B': B, 'T': th[0]}
 
-def fit_curves(trials, bins, B=0.5):
+def fit_curves(trials, bins, B):
     groups = group_trials(trials, coherence_grouper, False)
     cohs = sorted(groups)
     results = {}
@@ -106,19 +78,23 @@ def fit_session_curves(trials, bins, subj, cond, pickle_outfile):
     if not trials:
         logging.info('No graphs.')
         return
-    results = fit_curves(trials, bins)
+    results = fit_curves(trials, bins, DEFAULT_THETA['B'])
     pickle_fit(results, bins, pickle_outfile, subj, cond)
     return results
 
 def remove_bad_trials_by_session(trials, cond):
-    """ assumes filtering already done by cond """
+    """
+    assumes filtering already done by cond
+    """
     subjs = good_subjects[cond]
     bad_sess = bad_sessions[cond]
     keep = lambda t: t.session.subject in subjs and t.session.index not in bad_sess
     return [t for t in trials if keep(t)]
 
 def sample_trials_by_session(trials, cond, mult=5):
-    """ assumes filtering already done by cond """
+    """
+    assumes filtering already done by cond
+    """
     groups = group_trials(trials, subj_grouper, False)
     n = min(len(ts) for ts in groups.values())
     ts_all = []
@@ -169,9 +145,8 @@ def main(conds, kind, outdir):
     OUTDIR = os.path.join(BASEDIR, 'res', outdir)
     TRIALS = load_json(INFILE)
     if kind == 'ALL':
-        # 100 bins! why not?
-        bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 50))
-        bins[0] = BINS[0]
+        bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 50)) # lots of bins for fun
+        bins[0] = BINS[0] # to ensure lower bound on data
         across_subjects(TRIALS, conds, bins, OUTDIR)
     elif kind == 'SUBJECT':
         by_subject(TRIALS, conds, BINS, OUTDIR)
@@ -188,17 +163,3 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     main(args.conds, args.kind, args.outdir)
-
-"""
-* B=0.5 not always true
-    * sometimes there is obviously a delay, i.e. 0.5 extends up until some duration t'
-* MLE: bad at curves with lots of p~1
-* MLE: shouldn't always take first guess
-
-TO DO:
-    x re-gen for ALL
-    x re-gen for SUBJ
-    x finer bins for ALL
-    x 2d and 3d on same plot
-    o fit taus with line
-"""

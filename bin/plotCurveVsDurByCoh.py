@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 METHODS = ['huk', 'mle']
 COL_MAP = {'2d': 'g', '3d': 'r'}
-MKR_MAP = {'2d': 'o', '3d': 'o'}
+MKR_MAP = {'2d': 's', '3d': 's'}
 LIN_MAP = {'huk': 'dashed', 'mle': 'solid'}
 
 def pcor_curves(results, bins, cond, outfile):
@@ -39,7 +39,7 @@ def pcor_curves(results, bins, cond, outfile):
         xs_binned, ys_binned = zip(*results[coh]['binned'].iteritems())
         plt.plot(sec_to_ms(xs), ys_mle, color=COL_MAP[cond], linestyle='solid', label='MLE')
         plt.plot(sec_to_ms(xs), ys_huk, color=COL_MAP[cond], linestyle='dashed', label='HUK')
-        plt.plot(sec_to_ms(xs_binned), ys_binned, 'o')
+        plt.plot(sec_to_ms(xs_binned), ys_binned, color=COL_MAP[cond], marker='o', linestyle='None')
         plt.xscale('log')
         # plt.xlim()
         plt.ylim(0.2, 1.1)
