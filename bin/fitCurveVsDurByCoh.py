@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, good_subjects, bad_sessions, good_cohs, bad_cohs
+from session_info import DEFAULT_THETA, BINS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs
 from fit_compare import pick_best_theta
 from sample import sample_wr
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y
@@ -121,11 +121,15 @@ def fit(subj, cond, trials, bins, outfile, resample=False):
         trials = sample_trials_by_session(trials, cond)
     return fit_session_curves(trials, bins, subj, cond, outfile)
 
-def by_subject(trials, conds, bins, outdir):
+def by_subject(trials, conds, bins, outdir, subj=None):
     groups = group_trials(trials, session_grouper, False)
     results = {}
     for cond in conds:
-        for subj in good_subjects[cond]:
+        if subj:
+            subjs = [subj]
+        else:
+            subjs = good_subjects[cond]
+        for subj in subjs:
             trials = groups[(subj, cond)]
             outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
             fit(subj, cond, trials, bins, outfile)
@@ -138,31 +142,33 @@ def across_subjects(trials, conds, bins, outdir):
         outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
         fit(subj, cond, trials, bins, outfile, resample=True)
 
-def main(conds, kind, outdir):
+def main(conds, subj, outdir):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     INFILE = os.path.join(BASEDIR, 'data.json')
     OUTDIR = os.path.join(BASEDIR, 'res', outdir)
     TRIALS = load_json(INFILE)
-    if kind == 'ALL':
+    if subj == 'ALL':
         bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 50)) # lots of bins for fun
         bins[0] = BINS[0] # to ensure lower bound on data
         across_subjects(TRIALS, conds, bins, OUTDIR)
-    elif kind == 'SUBJECT':
+    elif subj == 'SUBJECT':
         by_subject(TRIALS, conds, BINS, OUTDIR)
+    elif subj in all_subjs:
+        by_subject(TRIALS, conds, BINS, OUTDIR, subj=subj)
     else:
-        msg = "kind {0} not recognized".format(kind)
+        msg = "subj {0} not recognized".format(subj)
         logging.error(msg)
         raise Exception(msg)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
 parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
-parser.add_argument('-k', "--kind", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'], help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
+parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="SUBJECT fits for each subject, ALL combines data and fits all at once. Or specify subject like HUK")
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    main(args.conds, args.kind, args.outdir)
+    main(args.conds, args.subj, args.outdir)
     """
     NOTE: See http://courses.washington.edu/matlab1/Lesson_5.html
     """

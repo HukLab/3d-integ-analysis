@@ -2,6 +2,7 @@ DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001}
 
 BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 
+all_subjs = ['huk', 'klb', 'krm', 'lnk', 'lkc']
 good_subjects = {
     '2d': ['huk', 'lnk'],
     '3d': ['huk', 'lnk', 'lkc'],

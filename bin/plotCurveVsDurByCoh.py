@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from dio import makefn
 from fcns import saturating_exp
-from session_info import good_subjects
+from session_info import all_subjs, good_subjects
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -129,14 +129,25 @@ def load_pickle(indir, subj, cond):
     infile = os.path.join(indir, '{0}-{1}-fit.pickle'.format(subj, cond))
     return pickle.load(open(infile))
 
-def main(conds, subjs_by_cond, indir, outdir):
+def main(conds, subj, indir, outdir):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     INDIR = os.path.join(BASEDIR, 'res', indir)
-    OUTDIR = os.path.join(BASEDIR, 'res', outdir)            
+    OUTDIR = os.path.join(BASEDIR, 'res', outdir)
+
+    if subj == 'SUBJECT':
+        subjs_by_cond = dict((cond, good_subjects[cond]) for cond in conds)
+    elif subj == 'ALL':
+        subjs_by_cond = dict((cond, [subj]) for cond in conds)
+    elif subj in all_subjs:
+        subjs_by_cond = dict((cond, [subj]) for cond in conds)
+    else:
+        msg = "subj {0} not recognized".format(subj)
+        logging.error(msg)
+        raise Exception(msg)
     
-    all_subjs = list(set(chain(*subjs_by_cond.values())))
-    for subj in all_subjs:
+    subjs = list(set(chain(*subjs_by_cond.values())))
+    for subj in subjs:
         subj_conds = [cond for cond in conds if subj in subjs_by_cond[cond]]
         results_both = {}
         for cond in subj_conds:
@@ -152,12 +163,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
 parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
 parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
-parser.add_argument('-k', "--kind", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'], help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
+parser.add_argument('-s', "--subj", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'] + all_subjs, help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    if args.kind == 'SUBJECT':
-        subjs = dict((cond, good_subjects[cond]) for cond in args.conds)
-    else:
-        subjs = dict((cond, ['ALL']) for cond in args.conds)
-    main(args.conds, subjs, args.indir, args.outdir)
+    main(args.conds, args.subj, args.indir, args.outdir)
