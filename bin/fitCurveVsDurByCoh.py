@@ -12,7 +12,6 @@ from fit_compare import pick_best_theta
 from sample import sample_wr
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y
 from huk_tau_e import binned_ps, huk_tau_e
-from mle_set_B import mle_set_B
 from mle import mle
 
 logging.basicConfig(level=logging.DEBUG)
@@ -30,13 +29,13 @@ def pickle_fit(results, bins, outfile, subj, cond):
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
 def mle_fit(ts, B, bins, coh, quick=True):
-    ths = mle_set_B(ts, B=B, quick=quick)
+    ths = mle(ts, (None, B, None), quick=quick)
     if ths:
         th = pick_best_theta(ths)
     else:
         msg = 'No fits found with fixed B={0}. Letting B vary.'.format(B)
         # logging.info(msg)
-        # ths = mle(ts, quick=True)
+        # ths = mle(ts, (None, None, None), quick=True)
         if not ths:
             msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
             logging.warning(msg)

@@ -27,24 +27,20 @@ def keep_solution(theta, bnds, ymin):
     at_bounds = lambda x, (lb, rb): at_left_bound(x, lb) or at_right_bound(x, rb)
     return not any([at_bounds(th, bnd) for th, bnd in zip(theta['x'], bnds)])
 
-def log_likelihood(arr, fcn, thetas, try_modifying=False):
+def log_likelihood(arr, fcn, thetas):
     """
     arr is array of [[x0, y0], [x1, y1], ...]
         where each yi in {0, 1}
     fcn if function, and will be applied to each xi
     thetas is tuple, a set of parameters passed to fcn along with each xi
-    try_modifying corrects each 
 
     calculates the sum of the log-likelihood of arr
         = sum_i fcn(xi, *thetas)^(yi) * (1 - fcn(xi, *thetas))^(1-yi)
     """
     fcn_x = lambda x: fcn(x, *thetas)
-    fcn_x_adjust = lambda x: fcn(x, *thetas)*0.99 + 0.005 if try_modifying else fcn(x, *thetas)
-    likelihood = lambda row: fcn_x_adjust(row[0]) if row[1] else 1-fcn_x_adjust(row[0])
+    likelihood = lambda row: fcn_x(row[0]) if row[1] else 1-fcn_x(row[0])
     log_likeli = lambda row: np.log(likelihood(row))
     val = sum(map(log_likeli, arr))
-    if is_nan(val) and not try_modifying:
-        val = log_likelihood(arr, fcn, thetas, try_modifying=True)
     return val
 
 def saturating_exp(x, A, B, T):
