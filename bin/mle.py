@@ -1,55 +1,61 @@
-import math
-import itertools
 import logging
-from collections import Iterable
 
 import numpy as np
 from scipy.optimize import minimize
 
-from fcns import saturating_exp, log_likelihood, keep_solution, APPROX_ZERO
-
 logging.basicConfig(level=logging.DEBUG)
 
-A_GUESSES =  [i/10.0 for i in xrange(1, 10)]
-B_GUESSES = [i/10.0 for i in xrange(1, 10)]
-T_GUESSES = [1000, 500, 250, 100, 50, 10]
-# BOUNDS = {'A': (0.0, 1.0), 'B': (0.0, 1.0), 'T': (0.0, None)}
-BOUNDS = {'A': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'B': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'T': (0.0+APPROX_ZERO, None)}
-CONSTRAINTS = [] # [{'type': 'ineq', 'fun': lambda theta: theta[0] - theta[1]}] # A > B
+APPROX_ZERO = 0.0001
 
-def get_guesses(A, B, T):
-	if A is None and B is None and T is None:
-		guesses = [A_GUESSES, B_GUESSES, T_GUESSES]
-	elif A is None and B is not None and T is None:
-		guesses = [A_GUESSES, T_GUESSES]
-	elif A is not None and B is not None and T is None:
-		guesses = [T_GUESSES]
-	else:
-		msg = "MLE incorrectly defined."
-		logging.error(msg)
-		raise Exception(msg)
-	return list(itertools.product(*guesses)) # cartesian product
+def log_likelihood(arr, fcn, thetas):
+    """
+    arr is array of [[x0, y0], [x1, y1], ...]
+        where each yi in {0, 1}
+    fcn if function, and will be applied to each xi
+    thetas is tuple, a set of parameters passed to fcn along with each xi
 
-def log_likelihood_fcn(data, (A, B, T)):
-	if A is None and B is None and T is None:
-		return lambda theta: -log_likelihood(data, saturating_exp, (theta[0], theta[1], theta[2]))
-	elif A is None and B is not None and T is None:
-		return lambda theta: -log_likelihood(data, saturating_exp, (theta[0], B, theta[1]))
-	elif A is not None and B is not None and T is None:
-		return lambda theta: -log_likelihood(data, saturating_exp, (A, B, theta[0]))
-	else:
-		msg = "MLE incorrectly defined."
-		logging.error(msg)
-		raise Exception(msg)
+    calculates the sum of the log-likelihood of arr
+        = sum_i fcn(xi, *thetas)^(yi) * (1 - fcn(xi, *thetas))^(1-yi)
+    """
+    fcn_x = lambda x: fcn(x, *thetas)
+    likelihood = lambda row: fcn_x(row[0]) if row[1] else 1-fcn_x(row[0])
+    log_likeli = lambda row: np.log(likelihood(row))
+    val = sum(map(log_likeli, arr))
+    return val
 
-def mle(data, (A, B, T), quick=False, method='TNC'):
+def pick_best_theta(thetas):
+	close_enough = lambda x,y: abs(x-y) < APPROX_ZERO
+	min_th = min(thetas, key=lambda d: d['fun'])
+	if len(thetas) > 1:
+		ths = [th for th in thetas if close_enough(th['fun'], min_th['fun'])]
+		msg = '{0} out of {1} guesses found minima of {2}'.format(len(ths), len(thetas), min_th['fun'])
+		logging.info(msg)
+	return min_th['x']
+
+def keep_solution(theta, bnds, ymin):
+    """
+    theta is return value of scipy.optimize.minimize,
+        where theta['x'] is list [t1, ...] of solution values
+    bnds is list [(lb1, rb1), ...] of bounds for each ti in theta['x']
+    ymin is previously-found minimum solution
+
+    returns True iff theta is a success, lower than ymin, and has solutions not near its bounds
+    """
+    if not theta['success']:
+        return False
+    if theta['fun'] >= ymin:
+        return False
+    close_enough = lambda x, b: abs(x-b) < APPROX_ZERO*10
+    at_left_bound = lambda x, lb: close_enough(x, lb) if lb else False
+    at_right_bound = lambda x, rb: close_enough(x, rb) if rb else False
+    at_bounds = lambda x, (lb, rb): at_left_bound(x, lb) or at_right_bound(x, rb)
+    return not any([at_bounds(th, bnd) for th, bnd in zip(theta['x'], bnds)])
+
+def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=False, method='TNC'):
 	"""
 	data is list [(dur, resp)]
 		dur is float
 		resp is bool
-	(A, B, T) are numerics
-		the model parameters
-		if None, they will be fit
 	quick is bool
 		chooses the first solution not touching the bounds
 	method is str
@@ -57,14 +63,18 @@ def mle(data, (A, B, T), quick=False, method='TNC'):
 		constraints only for: COBYLA, SLSQP
 		NOTE: SLSQP tends to give a lot of run-time errors...
 	"""
-	bnds = [BOUNDS[key] for key, val in zip(['A', 'B', 'T'], [A, B, T]) if val is None]
-	cons = CONSTRAINTS
+	if len(data) == 0 or len(guesses) == 0:
+		return None
+	if bounds is None:
+		bounds = []
+	if constraints is None:
+		constraints = []
 
 	thetas = []
 	ymin = float('inf')
-	for guess in get_guesses(A, B, T):
-		theta = minimize(log_likelihood_fcn(data, (A, B, T)), guess, method=method, bounds=bnds, constraints=cons)
-		if keep_solution(theta, bnds, ymin):
+	for guess in guesses:
+		theta = minimize(log_likelihood_fcn, guess, method=method, bounds=bounds, constraints=constraints)
+		if keep_solution(theta, bounds, ymin):
 			ymin = theta['fun']
 			thetas.append(theta)
 			if quick:

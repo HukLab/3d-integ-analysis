@@ -5,12 +5,12 @@ import numpy as np
 from scipy.optimize import minimize
 
 from session_info import BINS
-from fcns import saturating_exp
+from saturating_exponential import saturating_exp
 from sample import bootstrap
 
 logging.basicConfig(level=logging.DEBUG)
-NBOOTS = 1000
 
+NBOOTS = 1000
 mean = lambda xs: sum(x for x in xs)*1.0/len(xs)
 
 def bin_data(data, bins):

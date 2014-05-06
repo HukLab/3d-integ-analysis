@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dio import makefn
-from fcns import saturating_exp
+from saturating_exponential import saturating_exp
 from session_info import all_subjs, good_subjects
 
 logging.basicConfig(level=logging.DEBUG)

@@ -7,12 +7,12 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs
-from fit_compare import pick_best_theta
+from session_info import DEFAULT_THETA, BINS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from mle import pick_best_theta
 from sample import sample_wr
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y
 from huk_tau_e import binned_ps, huk_tau_e
-from mle import mle
+import saturating_exponential
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -28,14 +28,15 @@ def pickle_fit(results, bins, outfile, subj, cond):
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
-def mle_fit(ts, B, bins, coh, quick=True):
-    ths = mle(ts, (None, B, None), quick=quick)
+def mle_fit(ts, bins, coh):
+    B = DEFAULT_THETA['B']
+    ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT)
     if ths:
         th = pick_best_theta(ths)
     else:
         msg = 'No fits found with fixed B={0}. Letting B vary.'.format(B)
         # logging.info(msg)
-        # ths = mle(ts, (None, None, None), quick=True)
+        # ths = saturating_exponential.fit(ts, (None, None, None), quick=QUICK_FIT)
         if not ths:
             msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
             logging.warning(msg)
@@ -44,7 +45,8 @@ def mle_fit(ts, B, bins, coh, quick=True):
     logging.info(msg)
     return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}
 
-def huk_fit(ts, B, bins, coh):
+def huk_fit(ts, bins, coh):
+    B = DEFAULT_THETA['B']
     ths, A = huk_tau_e(ts, B=B, durs=bins)
     if ths:
         th = pick_best_theta(ths)
@@ -56,7 +58,7 @@ def huk_fit(ts, B, bins, coh):
     logging.info(msg)
     return {'A': A, 'B': B, 'T': th[0]}
 
-def fit_curves(trials, bins, B):
+def fit_curves(trials, bins):
     groups = group_trials(trials, coherence_grouper, False)
     cohs = sorted(groups)
     results = {}
@@ -65,8 +67,8 @@ def fit_curves(trials, bins, B):
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
         results[coh] = {}
-        results[coh]['mle'] = mle_fit(ts_cur_coh, B, bins, coh)
-        results[coh]['huk'] = huk_fit(ts_cur_coh, B, bins, coh)
+        results[coh]['mle'] = mle_fit(ts_cur_coh, bins, coh)
+        results[coh]['huk'] = huk_fit(ts_cur_coh, bins, coh)
         results[coh]['binned'] = binned_ps(ts_cur_coh, bins)
         results[coh]['ntrials'] = len(ts_cur_coh)
     return results
@@ -77,7 +79,7 @@ def fit_session_curves(trials, bins, subj, cond, pickle_outfile):
     if not trials:
         logging.info('No graphs.')
         return
-    results = fit_curves(trials, bins, DEFAULT_THETA['B'])
+    results = fit_curves(trials, bins)
     pickle_fit(results, bins, pickle_outfile, subj, cond)
     return results
 

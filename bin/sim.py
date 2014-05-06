@@ -4,13 +4,14 @@ import math
 from numpy import random, log10, logspace, exp
 
 from dio import load_json
-from fcns import saturating_exp
+from saturating_exponential import saturating_exp
 from summaries import by_coherence
 from fit_compare import pick_best_theta
 from mle import mle
-from mle_set_B import mle_set_B
-from mle_set_A_B import mle_set_A_B
+# from mle_set_B import mle_set_B
+# from mle_set_A_B import mle_set_A_B
 from huk_tau_e import huk_tau_e
+ERROR_MESSAGE = """NOTE: mle has been rewritten to cover mle_set_B and mle_set_A_B cases as well, so the below will not work yet."""
 
 p_correct = lambda dur, (A, B, T): saturating_exp(dur, A, B, T)
 
@@ -114,6 +115,7 @@ def main(outfile, nrepeats=10, nmults=10):
     """
     compare models for various multiples of the original sample size
     """
+    raise Excpetion(ERROR_MESSAGE)
     rows = []
     for mult in range(1, nmults+1):
         for i in xrange(nrepeats):
