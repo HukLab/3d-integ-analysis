@@ -7,11 +7,14 @@ from mle import mle, log_likelihood
 
 logging.basicConfig(level=logging.DEBUG)
 
+BOUNDS = [(None, None)]
 GUESSES = [i/10.0 for i in xrange(1, 10)]
+CONSTRAINTS = []
 
-def drift_diffusion((t, C), k):
+def drift_diffusion((C, t), k):
     """
-    t, C are independent variables
+    t is duration
+    C is coherence
     k relates the drift rate to C
 
     From Selen et al. (2012):
@@ -34,8 +37,7 @@ def log_likelihood_fcn(data):
     return lambda theta: -log_likelihood(data, drift_diffusion, [theta])
 
 def fit(data, quick=False, method='TNC'):
-    thetas = (A, B, T)
     guesses = GUESSES
-    bounds = []
-    constraints = []
+    bounds = BOUNDS
+    constraints = CONSTRAINTS
     return mle(data, log_likelihood_fcn(data), guesses, bounds, constraints, quick, method)

@@ -22,26 +22,32 @@ def pickle_fit(results, bins, outfile, subj, cond):
     n.b. json output is just for human-readability; it's not invertible since numeric keys become str
     """
     out = {}
-    out['fits'] = results
+    out['fits'] = results['fits']
+    out['ntrials'] = results['ntrials']
+    out['cohs'] = results['cohs']
     out['bins'] = bins
     out['subj'] = subj
     out['cond'] = cond
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
-def drift_fit(ts, bins):
-    ths = drift_diffuse.fit(ts, quick=QUICK_FIT)
+def drift_fit(groups):
+    tss = []
+    for coh in sorted(groups):
+        for x,y in as_x_y(groups[coh]):
+            tss.append([[coh, x], y])
+    ths = drift_diffuse.fit(tss, quick=QUICK_FIT)
     if ths:
         th = pick_best_theta(ths)
     else:
         th = [DEFAULT_THETA['K']]
         msg = 'No fits found for drift diffusion. Using k={0}'.format(th[0])
         logging.warning(msg)
-    msg = 'DRIFT: {0}'.format(th)
+    msg = 'DRIFT: k={0}'.format(th[0])
     logging.info(msg)
     return {'K': th[0]}
 
-def sat_exp_fit(ts, bins, coh):
+def sat_exp_fit(ts, coh):
     B = DEFAULT_THETA['B']
     ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT)
     if ths:
@@ -75,15 +81,22 @@ def fit_curves(trials, bins):
     groups = group_trials(trials, coherence_grouper, False)
     cohs = sorted(groups)
     results = {}
+    results = {}
+    results['ntrials'] = {}
+    results['cohs'] = cohs
+    results['fits'] = {}
+    results['fits']['huk'] = {}
+    results['fits']['sat-exp'] = {}
+    results['fits']['binned_pcor'] = {}
+    results['fits']['drift'] = drift_fit(groups)
     for coh in cohs:
         ts = groups[coh]
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        results[coh] = {}
-        results[coh]['sat-exp'] = sat_exp_fit(ts_cur_coh, bins, coh)
-        results[coh]['huk'] = huk_fit(ts_cur_coh, bins, coh)
-        results[coh]['binned'] = binned_ps(ts_cur_coh, bins)
-        results[coh]['ntrials'] = len(ts_cur_coh)
+        results['fits']['sat-exp'][coh] = sat_exp_fit(ts_cur_coh, coh)
+        results['fits']['huk'][coh] = huk_fit(ts_cur_coh, bins, coh)
+        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins)
+        results['ntrials'][coh] = len(ts_cur_coh)
     return results
 
 def fit_session_curves(trials, bins, subj, cond, pickle_outfile):
