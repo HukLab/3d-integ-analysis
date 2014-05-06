@@ -54,12 +54,9 @@ def saturating_exp(x, A, B, T):
     T is the time s.t. value is 63.2%  of (A-B)
     """
     if T == 0:
-        return float('inf')
-        # return np.ones(len(x))*A if isinstance(x, Iterable) else A
-    try:
-        return A - (A-B)*np.exp(-x*1000.0/T)
-    except:
-        return float('inf')
+        # returns either A or list of As depending on how whether x is numeric or array
+        return np.ones(len(x))*A if isinstance(x, Iterable) else A
+    return A - (A-B)*np.exp(-x*1000.0/T)
 
 def twin_limb(x, x0, S0, p):
     """
