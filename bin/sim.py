@@ -4,7 +4,7 @@ import math
 from numpy import random, log10, logspace, exp
 
 from dio import load_json
-from fcns import pc_per_dur_by_coh
+from fcns import saturating_exp
 from summaries import by_coherence
 from fit_compare import pick_best_theta
 from mle import mle
@@ -12,7 +12,7 @@ from mle_set_B import mle_set_B
 from mle_set_A_B import mle_set_A_B
 from huk_tau_e import huk_tau_e
 
-p_correct = lambda dur, (A, B, T): pc_per_dur_by_coh(dur, A, B, T)
+p_correct = lambda dur, (A, B, T): saturating_exp(dur, A, B, T)
 
 def uniform_durations(n, (min_dur, max_dur)):
     return random.uniform(min_dur, max_dur, n)

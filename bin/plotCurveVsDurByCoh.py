@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dio import makefn
-from fcns import pc_per_dur_by_coh
+from fcns import saturating_exp
 from session_info import good_subjects
 
 logging.basicConfig(level=logging.DEBUG)
@@ -21,7 +21,7 @@ LIN_MAP = {'huk': 'dashed', 'mle': 'solid'}
 def pcor_curves(results, bins, cond, outfile):
     min_dur, max_dur = min(bins), max(bins)
     xs = np.linspace(min_dur, max_dur)
-    yf = lambda x, th: pc_per_dur_by_coh(x, th['A'], th['B'], th['T'])
+    yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
 
     cohs = sorted(results.keys())
     nrows = 3

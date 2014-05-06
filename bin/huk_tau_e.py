@@ -5,7 +5,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 from session_info import BINS
-from fcns import pc_per_dur_by_coh
+from fcns import saturating_exp
 from sample import bootstrap
 
 logging.basicConfig(level=logging.DEBUG)
@@ -54,7 +54,7 @@ def choose_A(durs, ps):
 	return mean([ps[dur] for dur in durs[-3:]])
 
 def error(ps, A, B, tau):
-	return sum([math.pow(y - pc_per_dur_by_coh(x, A, B, tau), 2) for x, y in ps.iteritems()])
+	return sum([math.pow(y - saturating_exp(x, A, B, tau), 2) for x, y in ps.iteritems()])
 
 def error_fcn(ps, A, B):
 	return lambda tau: error(ps, A, B, tau)

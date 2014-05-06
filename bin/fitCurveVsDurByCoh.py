@@ -163,3 +163,6 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     main(args.conds, args.kind, args.outdir)
+    """
+    NOTE: See http://courses.washington.edu/matlab1/Lesson_5.html
+    """
