@@ -13,10 +13,10 @@ from session_info import all_subjs, good_subjects
 
 logging.basicConfig(level=logging.DEBUG)
 
-METHODS = ['huk', 'mle']
+METHODS = ['huk', 'sat-exp']
 COL_MAP = {'2d': 'g', '3d': 'r'}
 MKR_MAP = {'2d': 's', '3d': 's'}
-LIN_MAP = {'huk': 'dashed', 'mle': 'solid'}
+LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid'}
 
 def pcor_curves(results, bins, cond, outfile):
     min_dur, max_dur = min(bins), max(bins)
@@ -34,11 +34,10 @@ def pcor_curves(results, bins, cond, outfile):
         plt.title('{0}% coherence'.format(int(coh*100)))
         plt.xlabel('duration (ms)')
         plt.ylabel('% correct')
-        ys_mle = yf(xs, results[coh]['mle'])
-        ys_huk = yf(xs, results[coh]['huk'])
+        for method in METHODS:
+            ys = yf(xs, results[coh][method])
+            plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle='solid', label=method.upper())
         xs_binned, ys_binned = zip(*results[coh]['binned'].iteritems())
-        plt.plot(sec_to_ms(xs), ys_mle, color=COL_MAP[cond], linestyle='solid', label='MLE')
-        plt.plot(sec_to_ms(xs), ys_huk, color=COL_MAP[cond], linestyle='dashed', label='HUK')
         plt.plot(sec_to_ms(xs_binned), ys_binned, color=COL_MAP[cond], marker='o', linestyle='None')
         plt.xscale('log')
         # plt.xlim()

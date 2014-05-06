@@ -13,6 +13,7 @@ from sample import sample_wr
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y
 from huk_tau_e import binned_ps, huk_tau_e
 import saturating_exponential
+import drift_diffuse
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -28,20 +29,32 @@ def pickle_fit(results, bins, outfile, subj, cond):
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
-def mle_fit(ts, bins, coh):
+def drift_fit(ts, bins):
+    ths = drift_diffuse.fit(ts, quick=QUICK_FIT)
+    if ths:
+        th = pick_best_theta(ths)
+    else:
+        th = [DEFAULT_THETA['K']]
+        msg = 'No fits found for drift diffusion. Using k={0}'.format(th[0])
+        logging.warning(msg)
+    msg = 'DRIFT: {0}'.format(th)
+    logging.info(msg)
+    return {'K': th[0]}
+
+def sat_exp_fit(ts, bins, coh):
     B = DEFAULT_THETA['B']
     ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT)
     if ths:
         th = pick_best_theta(ths)
     else:
-        msg = 'No fits found with fixed B={0}. Letting B vary.'.format(B)
+        msg = 'No fits found for sat-exp with fixed B={0}. Letting B vary.'.format(B)
         # logging.info(msg)
         # ths = saturating_exponential.fit(ts, (None, None, None), quick=QUICK_FIT)
         if not ths:
             msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
             logging.warning(msg)
             th = [DEFAULT_THETA['A'], DEFAULT_THETA['T']]
-    msg = '{0}% MLE: {1}'.format(int(coh*100), th)
+    msg = '{0}% SAT_EXP: {1}'.format(int(coh*100), th)
     logging.info(msg)
     return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}
 
@@ -51,9 +64,9 @@ def huk_fit(ts, bins, coh):
     if ths:
         th = pick_best_theta(ths)
     else:
-        msg = 'No fits found for Huk Using tau=0.0001.'
-        logging.warning(msg)
         th = [DEFAULT_THETA['T']]
+        msg = 'No fits found for huk-fit. Using tau={0}.'.format(th[0])
+        logging.warning(msg)
     msg = '{0}% HUK: {1}'.format(int(coh*100), th)
     logging.info(msg)
     return {'A': A, 'B': B, 'T': th[0]}
@@ -67,7 +80,7 @@ def fit_curves(trials, bins):
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
         results[coh] = {}
-        results[coh]['mle'] = mle_fit(ts_cur_coh, bins, coh)
+        results[coh]['sat-exp'] = sat_exp_fit(ts_cur_coh, bins, coh)
         results[coh]['huk'] = huk_fit(ts_cur_coh, bins, coh)
         results[coh]['binned'] = binned_ps(ts_cur_coh, bins)
         results[coh]['ntrials'] = len(ts_cur_coh)

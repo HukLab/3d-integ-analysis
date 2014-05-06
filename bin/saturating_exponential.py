@@ -23,7 +23,7 @@ def get_guesses(A, B, T):
     elif A is not None and B is not None and T is None:
         guesses = [T_GUESSES]
     else:
-        msg = "MLE incorrectly defined."
+        msg = "SAT-EXP incorrectly defined."
         logging.error(msg)
         raise Exception(msg)
     return list(itertools.product(*guesses)) # cartesian product
@@ -47,7 +47,7 @@ def log_likelihood_fcn(data, (A, B, T)):
     elif A is not None and B is not None and T is None:
         return lambda theta: -log_likelihood(data, saturating_exp, (A, B, theta[0]))
     else:
-        msg = "MLE incorrectly defined."
+        msg = "SAT-EXP incorrectly defined."
         logging.error(msg)
         raise Exception(msg)
 

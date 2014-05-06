@@ -3,7 +3,7 @@ from math import sqrt, erf
 
 from scipy.optimize import minimize
 
-from mle import log_likelihood, keep_solution
+from mle import mle, log_likelihood
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -31,7 +31,11 @@ def drift_diffusion((t, C), k):
     return 0.5 - 0.5*erf(-k*C*t / sqrt(2*t))
 
 def log_likelihood_fcn(data):
-    return lambda theta: -log_likelihood(data, drift_diffusion, theta)
+    return lambda theta: -log_likelihood(data, drift_diffusion, [theta])
 
 def fit(data, quick=False, method='TNC'):
-    pass
+    thetas = (A, B, T)
+    guesses = GUESSES
+    bounds = []
+    constraints = []
+    return mle(data, log_likelihood_fcn(data), guesses, bounds, constraints, quick, method)
