@@ -38,8 +38,8 @@ def pickle_fit(results, bins, outfile, subj, cond):
 #             ts2.append([[coh, x], y])
 #     return ts2
 
-def drift_fit(ts2):
-    ths = drift_diffuse.fit(ts2, quick=QUICK_FIT)
+def drift_fit(ts2, guesses=None):
+    ths = drift_diffuse.fit(ts2, quick=QUICK_FIT, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
@@ -48,11 +48,11 @@ def drift_fit(ts2):
         logging.warning(msg)
     msg = 'DRIFT: k={0}'.format(th[0])
     logging.info(msg)
-    return {'K': th[0]}
+    return {'K': th[0]}, th
 
-def sat_exp_fit(ts, coh):
+def sat_exp_fit(ts, coh, guesses=None):
     B = DEFAULT_THETA['B']
-    ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT)
+    ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
@@ -65,11 +65,11 @@ def sat_exp_fit(ts, coh):
             th = [DEFAULT_THETA['A'], DEFAULT_THETA['T']]
     msg = '{0}% SAT_EXP: {1}'.format(int(coh*100), th)
     logging.info(msg)
-    return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}
+    return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}, th
 
-def huk_fit(ts, bins, coh):
+def huk_fit(ts, bins, coh, guesses=None):
     B = DEFAULT_THETA['B']
-    ths, A = huk_tau_e(ts, B=B, durs=bins)
+    ths, A = huk_tau_e(ts, B=B, durs=bins, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
@@ -78,20 +78,19 @@ def huk_fit(ts, bins, coh):
         logging.warning(msg)
     msg = '{0}% HUK: {1}'.format(int(coh*100), th)
     logging.info(msg)
-    return {'A': A, 'B': B, 'T': th[0]}
+    return {'A': A, 'B': B, 'T': th[0]}, th
 
-def bootstrap_fit_curves(ts, fcn, nboots=NBOOTS):
+def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
     """
     ts is trials
-    fcn takes trials only as its input
+    fcn takes trials and guesses as its inputs
 
     return mean and var of each parameter in bootstrapped fits
     """
-    fits = [fcn(ts)]
-    tssb = bootstrap(ts, nboots)
-    for tsb in tssb:
-        fit = fcn(tsb)
-        fits.append(fit)
+    og_fit, raw_fit = fit_fcn(ts, None)
+    guess = [float("%.3f" % x) for x in raw_fit] # will use initial solution as only guess
+    bootstrapped_fits = [fit_fcn(tsb, [raw_fit])[0] for tsb in bootstrap(ts, nboots)]
+    fits = [og_fit] + bootstrapped_fits
     return fits
 
 def fit_curves(trials, bins):
@@ -105,15 +104,15 @@ def fit_curves(trials, bins):
     results['fits']['huk'] = {}
     results['fits']['sat-exp'] = {}
     results['fits']['binned_pcor'] = {}
-    results['fits']['drift'] = bootstrap_fit_curves(ts_all, lambda ts: drift_fit(ts))
+    results['fits']['drift'] = bootstrap_fit_curves(ts_all, lambda ts, gs: drift_fit(ts, gs))
 
     for coh in cohs:
         ts = groups[coh]
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts: sat_exp_fit(ts, coh))
-        results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts: huk_fit(ts, bins, coh))
-        results['fits']['binned_pcor'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts: binned_ps(ts, bins))
+        results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: huk_fit(ts, bins, coh, gs))
+        results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: sat_exp_fit(ts, coh, gs))
+        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins)
         results['ntrials'][coh] = len(ts_cur_coh)
     return results
 

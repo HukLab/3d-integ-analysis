@@ -36,8 +36,9 @@ def drift_diffusion((C, t), k):
 def log_likelihood_fcn(data):
     return lambda theta: -log_likelihood(data, drift_diffusion, [theta])
 
-def fit(data, quick=False, method='TNC'):
-    guesses = GUESSES
+def fit(data, quick=False, guesses=None, method='TNC'):
+    if guesses is None:
+        guesses = GUESSES
     bounds = BOUNDS
     constraints = CONSTRAINTS
     return mle(data, log_likelihood_fcn(data), guesses, bounds, constraints, quick, method)

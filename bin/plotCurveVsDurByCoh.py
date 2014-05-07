@@ -20,9 +20,39 @@ COL_MAP = {'2d': 'g', '3d': 'r'}
 MKR_MAP = {'2d': 's', '3d': 's'}
 LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted'}
 
+def pcor_curve_error(fits, xs, ys_fcn):
+    """
+    fits is list of bootstrapped fits, each of which is a dict keyed by params
+    ys_fcn returns the y-value evaluated at xs with a fit from fits
+    returns the lower- and upper-bound of ys_fcn at a given x in xs across all fits
+    """
+    yss = [ys_fcn(xs, fit) for fit in fits]
+    ys_low, ys_high = [], []
+    for i, x in enumerate(xs):
+        ysi = [ys[i] for ys in yss]
+        ys_low.append(min(ysi))
+        ys_high.append(max(ysi))
+    return [np.array(ys_low)-yss[0], np.array(ys_high)-yss[0]]
+
+def plot_fit_hist(fits, outfile):
+    keys = fits[0].keys()
+    mean = dict((k, np.mean([fit[k] for fit in fits])) for k in keys)
+    var = dict((k, np.var([fit[k] for fit in fits])) for k in keys)
+    plt.clf()
+    for i, k in enumerate(keys):
+        plt.subplot(len(keys), 1, i+1)
+        plt.title(k)
+        plt.hist([fit[k] for fit in fits])
+    try:
+        plt.tight_layout()
+    except:
+        pass
+    plt.savefig(outfile)
+
 def pcor_curves(results, cohs, bins, cond, outfile):
     min_dur, max_dur = min(bins), max(bins)
-    xs = np.linspace(min_dur, max_dur)
+    # xs = np.linspace(min_dur, max_dur)
+    xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
     yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
     yf2 = lambda xs, th: [drift_diffusion((C, x), th['K']) for (C, x) in xs]
 
@@ -37,17 +67,25 @@ def pcor_curves(results, cohs, bins, cond, outfile):
         plt.xlabel('duration (ms)')
         plt.ylabel('% correct')
         for method in METHODS:
+            # plot_fit_hist(results[method][coh], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             ys = yf(xs, results[method][coh][0])
-            yserr = []
             plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
-            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None)
+            for res in results[method][coh]:
+                ys = yf(xs, res)
+                plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
+            # yserr = pcor_curve_error(results[method][coh], xs, yf)
+            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
         for method in NON_COH_METHODS:
+            # plot_fit_hist(results[method], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             xs2 = [(coh, x) for x in xs]
             ys = yf2(xs2, results[method][0])
-            yserr = []
             plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
-            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None)
-        xs_binned, ys_binned = zip(*results['binned_pcor'][coh][0].iteritems())
+            for res in results[method]:
+                ys = yf2(xs2, res)
+                plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
+            # yserr = pcor_curve_error(results[method], xs2, yf2)
+            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
+        xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
         plt.plot(sec_to_ms(xs_binned), ys_binned, color=COL_MAP[cond], marker='o', linestyle='None')
         plt.xscale('log')
         # plt.xlim()

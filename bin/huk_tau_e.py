@@ -60,7 +60,9 @@ def error_fcn(ps, A, B):
 	return lambda tau: error(ps, A, B, tau)
 
 def get_guesses():
-	return [10, 50, 100, 250, 500, 1000]
+	ts = [10, 50, 100, 250, 500, 1000]
+	return ts
+	# return [tuple(x) for x in ts]
 
 def write_bins(d, outfile):
 	import csv
@@ -70,7 +72,7 @@ def write_bins(d, outfile):
 			rows = [[dur, r] for r in rs]
 			csvwriter.writerows(rows)
 
-def huk_tau_e(data, B=0.5, durs=BINS, nboots=NBOOTS):
+def huk_tau_e(data, B=0.5, durs=BINS, guesses=None, nboots=NBOOTS):
 	"""
 	data is list [(dur, resp), ...]
 		dur is floar
@@ -87,12 +89,14 @@ def huk_tau_e(data, B=0.5, durs=BINS, nboots=NBOOTS):
 			B = 0.5 (chance)
 		3. minimize squared error
 	"""
+	if guesses is None:
+		guesses = get_guesses()
 	ps = binned_ps(data, durs, nboots)
 	A = choose_A(ps.keys(), ps) # 2
 
 	bnds = [(0.0001, None)]
 	thetas = []
-	for guess in get_guesses():
+	for guess in guesses:
 		theta = minimize(error_fcn(ps, A, B), guess, bounds=bnds)
 		thetas.append(theta)
 	return thetas, A

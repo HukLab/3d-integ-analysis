@@ -51,14 +51,15 @@ def log_likelihood_fcn(data, (A, B, T)):
         logging.error(msg)
         raise Exception(msg)
 
-def fit(data, (A, B, T), quick, method='TNC'):
+def fit(data, (A, B, T), quick, guesses=None, method='TNC'):
     """
     (A, B, T) are numerics
         the model parameters
         if None, they will be fit
     """
     thetas = (A, B, T)
-    guesses = get_guesses(A, B, T)
+    if guesses is None:
+        guesses = get_guesses(A, B, T)
     bounds = [BOUNDS[key] for key, val in zip(['A', 'B', 'T'], [A, B, T]) if val is None]
     constraints = CONSTRAINTS
     return mle(data, log_likelihood_fcn(data, thetas), guesses, bounds, constraints, quick, method)
