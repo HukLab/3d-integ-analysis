@@ -37,13 +37,17 @@ def pcor_curves(results, cohs, bins, cond, outfile):
         plt.xlabel('duration (ms)')
         plt.ylabel('% correct')
         for method in METHODS:
-            ys = yf(xs, results[method][coh])
+            ys = yf(xs, results[method][coh][0])
+            yserr = []
             plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
+            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None)
         for method in NON_COH_METHODS:
             xs2 = [(coh, x) for x in xs]
-            ys = yf2(xs2, results[method])
+            ys = yf2(xs2, results[method][0])
+            yserr = []
             plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
-        xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
+            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None)
+        xs_binned, ys_binned = zip(*results['binned_pcor'][coh][0].iteritems())
         plt.plot(sec_to_ms(xs_binned), ys_binned, color=COL_MAP[cond], marker='o', linestyle='None')
         plt.xscale('log')
         # plt.xlim()
@@ -86,11 +90,11 @@ def tau_curve_both_fits(results, cohs, cond, outfile, method=None):
     mkrs = []
     lins = []
     lbls = []
-    get_tau = lambda r, coh, method: r[method][coh]['T']
+    get_tau = lambda r, coh, method: r[method][coh][0]['T']
     for method in methods:
         xss.append(cohs)
         if method in NON_COH_METHODS:
-            yss.append([results[method]['K']*coh for coh in cohs])
+            yss.append([results[method][0]['K']*coh for coh in cohs])
         else:
             yss.append([get_tau(results, coh, method) for coh in cohs])
         cols.append(COL_MAP[cond])
@@ -112,14 +116,17 @@ def tau_curve_both_conds(results, cohs, outfile, method=None):
     mkrs = []
     lins = []
     lbls = []
-    get_tau = lambda r, coh, method: r[method][coh]['T']
+    get_tau = lambda r, coh, method: r[method][coh][0]['T'] if coh in r[method] else None
     for cond, res in results.iteritems():
         for method in methods:
-            xss.append(cohs)
             if method in NON_COH_METHODS:
-                yss.append([res[method]['K']*coh for coh in cohs])
+                ys = [res[method]['K']*coh for coh in cohs]
             else:
-                yss.append([get_tau(res, coh, method) for coh in cohs])
+                ys = [get_tau(res, coh, method) for coh in cohs if coh in res[method]]
+            xy = [(x,y) for x, y in zip(cohs, ys) if y]
+            xss.append([x for x,y in xy])
+            yss.append([y for x,y in xy])
+
             lbl = '{0}-{1}'.format(cond, method)
             cols.append(COL_MAP[cond])
             mkrs.append(MKR_MAP[cond])

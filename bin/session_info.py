@@ -1,4 +1,4 @@
-
+NBOOTS = 0
 QUICK_FIT = True
 
 DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001, 'K': 0}

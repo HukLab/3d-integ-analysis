@@ -27,6 +27,9 @@ def group_trials(trials, keyfunc, verbose=False):
 def as_x_y(trials):
 	return np.array([(t.duration, int(t.correct)) for t in trials])
 
+def as_C_x_y(trials):
+	return np.array([([t.coherence, t.duration], int(t.correct)) for t in trials])
+
 def by_coherence(trials, (subj, mode), coh):
 	groups = group_trials(trials, session_grouper, False)
 	trials = groups[(subj, mode)]

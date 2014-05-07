@@ -7,10 +7,10 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
 from mle import pick_best_theta
-from sample import sample_wr
-from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y
+from sample import sample_wr, bootstrap
+from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
 from huk_tau_e import binned_ps, huk_tau_e
 import saturating_exponential
 import drift_diffuse
@@ -31,12 +31,15 @@ def pickle_fit(results, bins, outfile, subj, cond):
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
-def drift_fit(groups):
-    tss = []
-    for coh in sorted(groups):
-        for x,y in as_x_y(groups[coh]):
-            tss.append([[coh, x], y])
-    ths = drift_diffuse.fit(tss, quick=QUICK_FIT)
+# def drift_fit_ts(groups):
+#     ts2 = []
+#     for coh in sorted(groups):
+#         for x,y in as_x_y(groups[coh]):
+#             ts2.append([[coh, x], y])
+#     return ts2
+
+def drift_fit(ts2):
+    ths = drift_diffuse.fit(ts2, quick=QUICK_FIT)
     if ths:
         th = pick_best_theta(ths)
     else:
@@ -77,10 +80,24 @@ def huk_fit(ts, bins, coh):
     logging.info(msg)
     return {'A': A, 'B': B, 'T': th[0]}
 
+def bootstrap_fit_curves(ts, fcn, nboots=NBOOTS):
+    """
+    ts is trials
+    fcn takes trials only as its input
+
+    return mean and var of each parameter in bootstrapped fits
+    """
+    fits = [fcn(ts)]
+    tssb = bootstrap(ts, nboots)
+    for tsb in tssb:
+        fit = fcn(tsb)
+        fits.append(fit)
+    return fits
+
 def fit_curves(trials, bins):
     groups = group_trials(trials, coherence_grouper, False)
+    ts_all = as_C_x_y(trials)
     cohs = sorted(groups)
-    results = {}
     results = {}
     results['ntrials'] = {}
     results['cohs'] = cohs
@@ -88,14 +105,15 @@ def fit_curves(trials, bins):
     results['fits']['huk'] = {}
     results['fits']['sat-exp'] = {}
     results['fits']['binned_pcor'] = {}
-    results['fits']['drift'] = drift_fit(groups)
+    results['fits']['drift'] = bootstrap_fit_curves(ts_all, lambda ts: drift_fit(ts))
+
     for coh in cohs:
         ts = groups[coh]
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        results['fits']['sat-exp'][coh] = sat_exp_fit(ts_cur_coh, coh)
-        results['fits']['huk'][coh] = huk_fit(ts_cur_coh, bins, coh)
-        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins)
+        results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts: sat_exp_fit(ts, coh))
+        results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts: huk_fit(ts, bins, coh))
+        results['fits']['binned_pcor'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts: binned_ps(ts, bins))
         results['ntrials'][coh] = len(ts_cur_coh)
     return results
 
