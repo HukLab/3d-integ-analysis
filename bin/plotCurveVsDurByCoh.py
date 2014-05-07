@@ -67,6 +67,8 @@ def pcor_curves(results, cohs, bins, cond, outfile):
         plt.xlabel('duration (ms)')
         plt.ylabel('% correct')
         for method in METHODS:
+            if method not in results:
+                continue
             # plot_fit_hist(results[method][coh], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             ys = yf(xs, results[method][coh][0])
             plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
@@ -76,6 +78,8 @@ def pcor_curves(results, cohs, bins, cond, outfile):
             # yserr = pcor_curve_error(results[method][coh], xs, yf)
             # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
         for method in NON_COH_METHODS:
+            if method not in results:
+                continue
             # plot_fit_hist(results[method], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             xs2 = [(coh, x) for x in xs]
             ys = yf2(xs2, results[method][0])
@@ -98,14 +102,15 @@ def pcor_curves(results, cohs, bins, cond, outfile):
     # plt.show()
     plt.savefig(outfile)
 
-def tau_curve(xss, yss, colors, markers, linestyles, labels, outfile):
+def tau_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile):
     plt.clf()
     plt.title('Time constants per coherence')
     plt.xlabel('coherence')
     plt.ylabel('tau (ms)')
     assert len(xss) == len(yss) == len(colors) == len(labels) == len(markers) == len(linestyles)
-    for xs, ys, col, mkr, lin, lbl in zip(xss, yss, colors, markers, linestyles, labels):
+    for xs, ys, yerr, col, mkr, lin, lbl in zip(xss, yss, yerrs, colors, markers, linestyles, labels):
         plt.plot(xs, ys, color=col, linestyle=lin, marker=mkr, label=lbl)
+        plt.errorbar(xs, ys, yerr=yerr, fmt=None, ecolor=col)
     plt.xscale('log')
     # plt.yscale('log')
     plt.ylim(0, 1200)
@@ -117,64 +122,47 @@ def tau_curve(xss, yss, colors, markers, linestyles, labels, outfile):
     # plt.show()
     plt.savefig(outfile)
 
-def tau_curve_both_fits(results, cohs, cond, outfile, method=None):
-    if method:
-        methods = [method]
-    else:
-        methods = METHODS
-    xss = []
-    yss = []
-    cols = []
-    mkrs = []
-    lins = []
-    lbls = []
-    get_tau = lambda r, coh, method: r[method][coh][0]['T']
-    for method in methods:
-        xss.append(cohs)
-        if method in NON_COH_METHODS:
-            yss.append([results[method][0]['K']*coh for coh in cohs])
-        else:
-            yss.append([get_tau(results, coh, method) for coh in cohs])
-        cols.append(COL_MAP[cond])
-        mkrs.append(MKR_MAP[cond])
-        lins.append(LIN_MAP[method])
-        lbls.append(method)
-    tau_curve(xss, yss, cols, mkrs, lins, lbls, outfile)
-
 def tau_curve_both_conds(results, cohs, outfile, method=None):
     """ results keyed first by cond """
-    assert len(results.keys()) == 2
+    # assert len(results.keys()) == 2
     if method:
         methods = [method]
     else:
         methods = METHODS
     xss = []
     yss = []
+    yerrs = []
     cols = []
     mkrs = []
     lins = []
     lbls = []
-    get_tau = lambda r, coh, method: r[method][coh][0]['T'] if coh in r[method] else None
+    def get_tau_bounds(r, k):
+        vals = [x[k] for x in r]
+        v = np.std(vals, ddof=1) if len(vals) > 1 else 0.0 # ddof=1 => divide by N-1
+        return v, v
+        # lb = np.percentile(vals, 25)
+        # ub = np.percentile(vals, 75)
+        # return vals[0] - lb, ub - vals[0]
     for cond, res in results.iteritems():
         for method in methods:
+            if method not in res:
+                continue
+            xs = [coh for coh in cohs if coh in res[method]]
+            xss.append(xs)
             if method in NON_COH_METHODS:
-                ys = [res[method]['K']*coh for coh in cohs]
+                ys = [res[method][0]['K']*coh for coh in xs]
+                yerr = [get_tau_bounds(res[method], 'K')*coh for coh in xs]
             else:
-                ys = [get_tau(res, coh, method) for coh in cohs if coh in res[method]]
-            xy = [(x,y) for x, y in zip(cohs, ys) if y]
-            xss.append([x for x,y in xy])
-            yss.append([y for x,y in xy])
-
+                ys = [res[method][coh][0]['T'] for coh in xs]
+                yerr = [get_tau_bounds(res[method][coh], 'T') for coh in xs]
+            yss.append(ys)
+            yerrs.append(zip(*yerr)) # [lower_bounds, upper_bounds]
             lbl = '{0}-{1}'.format(cond, method)
             cols.append(COL_MAP[cond])
             mkrs.append(MKR_MAP[cond])
             lins.append(LIN_MAP[method])
             lbls.append(lbl)
-    tau_curve(xss, yss, cols, mkrs, lins, lbls, outfile)
-
-def plot_curves(fits, cohs, bins, cond, outfiles):
-    pcor_curves(fits, cohs, bins, cond, outfiles['fit'])
-    tau_curve_both_fits(fits, cohs, cond, outfiles['tau'])
+    tau_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile)
 
 def make_outfiles(outdir, subj, cond):
     return {'fit': makefn(outdir, subj, cond, 'fit', 'png'), 'tau': makefn(outdir, subj, cond, 'tau', 'png')}
@@ -210,11 +198,10 @@ def main(conds, subj, indir, outdir):
             outfiles = make_outfiles(OUTDIR, subj, cond)
             if not cohs:
                 cohs = res['cohs']
-            plot_curves(res['fits'], res['cohs'], res['bins'], cond, outfiles)
+            pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfiles['fit'])
             results_both[cond] = res['fits']
-        if len(subj_conds) > 1:
-            outfile = makefn(OUTDIR, subj, 'both', 'tau', 'png')
-            tau_curve_both_conds(results_both, cohs, outfile)
+        outfiles = make_outfiles(OUTDIR, subj, 'cond')
+        tau_curve_both_conds(results_both, cohs, outfiles['tau'])
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")

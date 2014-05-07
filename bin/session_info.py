@@ -1,5 +1,7 @@
-NBOOTS = 1000
+NBOOTS = 50
 QUICK_FIT = True
+FITS = {'huk': False, 'sat-exp': True, 'drift': False}
+# FITS = {'huk': True, 'sat-exp': True, 'drift': True}
 
 DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001, 'K': 0}
 

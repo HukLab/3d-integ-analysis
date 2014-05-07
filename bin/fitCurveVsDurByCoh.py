@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, FITS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
 from mle import pick_best_theta
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
@@ -31,26 +31,22 @@ def pickle_fit(results, bins, outfile, subj, cond):
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
-# def drift_fit_ts(groups):
-#     ts2 = []
-#     for coh in sorted(groups):
-#         for x,y in as_x_y(groups[coh]):
-#             ts2.append([[coh, x], y])
-#     return ts2
-
 def drift_fit(ts2, guesses=None):
+    fit_found = True
     ths = drift_diffuse.fit(ts2, quick=QUICK_FIT, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
         th = [DEFAULT_THETA['K']]
         msg = 'No fits found for drift diffusion. Using k={0}'.format(th[0])
+        fit_found = False
         logging.warning(msg)
     msg = 'DRIFT: k={0}'.format(th[0])
     logging.info(msg)
-    return {'K': th[0]}, th
+    return {'K': th[0]}, th, fit_found
 
 def sat_exp_fit(ts, coh, guesses=None):
+    fit_found = True
     B = DEFAULT_THETA['B']
     ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT, guesses=guesses)
     if ths:
@@ -62,12 +58,14 @@ def sat_exp_fit(ts, coh, guesses=None):
         if not ths:
             msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
             logging.warning(msg)
+            fit_found = False
             th = [DEFAULT_THETA['A'], DEFAULT_THETA['T']]
     msg = '{0}% SAT_EXP: {1}'.format(int(coh*100), th)
     logging.info(msg)
-    return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}, th
+    return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}, th, fit_found
 
 def huk_fit(ts, bins, coh, guesses=None):
+    fit_found = True
     B = DEFAULT_THETA['B']
     ths, A = huk_tau_e(ts, B=B, durs=bins, guesses=guesses)
     if ths:
@@ -76,9 +74,10 @@ def huk_fit(ts, bins, coh, guesses=None):
         th = [DEFAULT_THETA['T']]
         msg = 'No fits found for huk-fit. Using tau={0}.'.format(th[0])
         logging.warning(msg)
+        fit_found = False
     msg = '{0}% HUK: {1}'.format(int(coh*100), th)
     logging.info(msg)
-    return {'A': A, 'B': B, 'T': th[0]}, th
+    return {'A': A, 'B': B, 'T': th[0]}, th, fit_found
 
 def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
     """
@@ -87,10 +86,13 @@ def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
 
     return mean and var of each parameter in bootstrapped fits
     """
-    og_fit, raw_fit = fit_fcn(ts, None)
-    guess = [float("%.3f" % x) for x in raw_fit] # will use initial solution as only guess
-    bootstrapped_fits = [fit_fcn(tsb, [raw_fit])[0] for tsb in bootstrap(ts, nboots)]
+    og_fit = fit_fcn(ts, None)
+    guess = [float("%.3f" % x) for x in og_fit[1]] # will use initial solution as only guess
+    bootstrapped_fits = [fit_fcn(tsb, [guess]) for tsb in bootstrap(ts, nboots)]
     fits = [og_fit] + bootstrapped_fits
+    fits = [fit for fit, raw, success in fits if success] # remove unsuccessful attempts
+    if not fits:
+        fits = [og_fit[0]]
     return fits
 
 def fit_curves(trials, bins):
@@ -101,17 +103,22 @@ def fit_curves(trials, bins):
     results['ntrials'] = {}
     results['cohs'] = cohs
     results['fits'] = {}
-    results['fits']['huk'] = {}
-    results['fits']['sat-exp'] = {}
+    if FITS['huk']:
+        results['fits']['huk'] = {}
+    if FITS['sat-exp']:
+        results['fits']['sat-exp'] = {}
     results['fits']['binned_pcor'] = {}
-    results['fits']['drift'] = bootstrap_fit_curves(ts_all, lambda ts, gs: drift_fit(ts, gs))
+    if FITS['drift']:
+        results['fits']['drift'] = bootstrap_fit_curves(ts_all, lambda ts, gs: drift_fit(ts, gs))
 
     for coh in cohs:
         ts = groups[coh]
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: huk_fit(ts, bins, coh, gs))
-        results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: sat_exp_fit(ts, coh, gs))
+        if FITS['huk']:
+            results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: huk_fit(ts, bins, coh, gs))
+        if FITS['sat-exp']:
+            results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: sat_exp_fit(ts, coh, gs))
         results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins)
         results['ntrials'][coh] = len(ts_cur_coh)
     return results
