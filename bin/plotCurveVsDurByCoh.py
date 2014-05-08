@@ -124,7 +124,6 @@ def tau_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile):
 
 def tau_curve_both_conds(results, cohs, outfile, method=None):
     """ results keyed first by cond """
-    # assert len(results.keys()) == 2
     if method:
         methods = [method]
     else:
@@ -136,13 +135,12 @@ def tau_curve_both_conds(results, cohs, outfile, method=None):
     mkrs = []
     lins = []
     lbls = []
+    
     def get_tau_bounds(r, k):
         vals = [x[k] for x in r]
         v = np.std(vals, ddof=1) if len(vals) > 1 else 0.0 # ddof=1 => divide by N-1
         return v, v
-        # lb = np.percentile(vals, 25)
-        # ub = np.percentile(vals, 75)
-        # return vals[0] - lb, ub - vals[0]
+
     for cond, res in results.iteritems():
         for method in methods:
             if method not in res:

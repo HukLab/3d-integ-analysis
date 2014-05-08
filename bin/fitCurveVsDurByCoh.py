@@ -86,9 +86,15 @@ def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
 
     return mean and var of each parameter in bootstrapped fits
     """
+    use_as_guess = lambda fit: [[float("%.3f" % x) for x in fit[1]]]
     og_fit = fit_fcn(ts, None)
-    guess = [float("%.3f" % x) for x in og_fit[1]] # will use initial solution as only guess
-    bootstrapped_fits = [fit_fcn(tsb, [guess]) for tsb in bootstrap(ts, nboots)]
+    guess = use_as_guess(og_fit) if og_fit[2] else None # will use initial solution as guess
+    bootstrapped_fits = []
+    for tsb in bootstrap(ts, nboots):
+        f = fit_fcn(tsb, guess)
+        bootstrapped_fits.append(f)
+        if guess is None and f[2]:
+            guess = use_as_guess(f)
     fits = [og_fit] + bootstrapped_fits
     fits = [fit for fit, raw, success in fits if success] # remove unsuccessful attempts
     if not fits:
