@@ -102,18 +102,18 @@ def pcor_curves(results, cohs, bins, cond, outfile):
     # plt.show()
     plt.savefig(outfile)
 
-def tau_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile):
+def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, title, ylabel):
     plt.clf()
-    plt.title('Time constants per coherence')
+    plt.title(title)
     plt.xlabel('coherence')
-    plt.ylabel('tau (ms)')
+    plt.ylabel(ylabel)
     assert len(xss) == len(yss) == len(colors) == len(labels) == len(markers) == len(linestyles)
     for xs, ys, yerr, col, mkr, lin, lbl in zip(xss, yss, yerrs, colors, markers, linestyles, labels):
         plt.plot(xs, ys, color=col, linestyle=lin, marker=mkr, label=lbl)
         plt.errorbar(xs, ys, yerr=yerr, fmt=None, ecolor=col)
     plt.xscale('log')
     # plt.yscale('log')
-    plt.ylim(0, 1200)
+    plt.ylim(0, max(chain(*yss)))
     # plt.legend()
     try:
         plt.tight_layout()
@@ -122,12 +122,9 @@ def tau_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile):
     # plt.show()
     plt.savefig(outfile)
 
-def tau_curve_both_conds(results, cohs, outfile, method=None):
+def param_curve_both_conds(results, cohs, outfile, key, title, ylabel):
     """ results keyed first by cond """
-    if method:
-        methods = [method]
-    else:
-        methods = METHODS
+    methods = METHODS
     xss = []
     yss = []
     yerrs = []
@@ -136,7 +133,7 @@ def tau_curve_both_conds(results, cohs, outfile, method=None):
     lins = []
     lbls = []
     
-    def get_tau_bounds(r, k):
+    def get_param_bounds(r, k):
         vals = [x[k] for x in r]
         v = np.std(vals, ddof=1) if len(vals) > 1 else 0.0 # ddof=1 => divide by N-1
         return v, v
@@ -149,10 +146,12 @@ def tau_curve_both_conds(results, cohs, outfile, method=None):
             xss.append(xs)
             if method in NON_COH_METHODS:
                 ys = [res[method][0]['K']*coh for coh in xs]
-                yerr = [get_tau_bounds(res[method], 'K')*coh for coh in xs]
+                yerr = [get_param_bounds(res[method], 'K')*coh for coh in xs]
             else:
-                ys = [res[method][coh][0]['T'] for coh in xs]
-                yerr = [get_tau_bounds(res[method][coh], 'T') for coh in xs]
+                # for coh in xs:
+                #     plot_fit_hist(res[method][coh], outfile.replace('.png', '_' + cond + '_' + str(coh) + '.png'))
+                ys = [res[method][coh][0][key] for coh in xs]
+                yerr = [get_param_bounds(res[method][coh], key) for coh in xs]
             yss.append(ys)
             yerrs.append(zip(*yerr)) # [lower_bounds, upper_bounds]
             lbl = '{0}-{1}'.format(cond, method)
@@ -160,10 +159,10 @@ def tau_curve_both_conds(results, cohs, outfile, method=None):
             mkrs.append(MKR_MAP[cond])
             lins.append(LIN_MAP[method])
             lbls.append(lbl)
-    tau_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile)
+    param_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile, title, ylabel)
 
 def make_outfiles(outdir, subj, cond):
-    return {'fit': makefn(outdir, subj, cond, 'fit', 'png'), 'tau': makefn(outdir, subj, cond, 'tau', 'png')}
+    return {'fit': makefn(outdir, subj, cond, 'fit', 'png'), 'tau': makefn(outdir, subj, cond, 'tau', 'png'), 'A': makefn(outdir, subj, cond, 'A', 'png')}
 
 def load_pickle(indir, subj, cond):
     infile = os.path.join(indir, '{0}-{1}-fit.pickle'.format(subj, cond))
@@ -199,7 +198,8 @@ def main(conds, subj, indir, outdir):
             pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfiles['fit'])
             results_both[cond] = res['fits']
         outfiles = make_outfiles(OUTDIR, subj, 'cond')
-        tau_curve_both_conds(results_both, cohs, outfiles['tau'])
+        param_curve_both_conds(results_both, cohs, outfiles['A'], 'A', 'Saturation % correct per coherence', 'A')
+        param_curve_both_conds(results_both, cohs, outfiles['tau'], 'T', 'Time constants per coherence', 'tau (ms)')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")

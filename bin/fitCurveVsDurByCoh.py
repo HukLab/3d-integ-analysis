@@ -40,9 +40,9 @@ def drift_fit(ts2, guesses=None):
         th = [DEFAULT_THETA['K']]
         msg = 'No fits found for drift diffusion. Using k={0}'.format(th[0])
         fit_found = False
-        logging.warning(msg)
+        # logging.warning(msg)
     msg = 'DRIFT: k={0}'.format(th[0])
-    logging.info(msg)
+    # logging.info(msg)
     return {'K': th[0]}, th, fit_found
 
 def sat_exp_fit(ts, coh, guesses=None):
@@ -57,11 +57,11 @@ def sat_exp_fit(ts, coh, guesses=None):
         # ths = saturating_exponential.fit(ts, (None, None, None), quick=QUICK_FIT)
         if not ths:
             msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
-            logging.warning(msg)
+            # logging.warning(msg)
             fit_found = False
             th = [DEFAULT_THETA['A'], DEFAULT_THETA['T']]
     msg = '{0}% SAT_EXP: {1}'.format(int(coh*100), th)
-    logging.info(msg)
+    # logging.info(msg)
     return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}, th, fit_found
 
 def huk_fit(ts, bins, coh, guesses=None):
@@ -73,10 +73,10 @@ def huk_fit(ts, bins, coh, guesses=None):
     else:
         th = [DEFAULT_THETA['T']]
         msg = 'No fits found for huk-fit. Using tau={0}.'.format(th[0])
-        logging.warning(msg)
+        # logging.warning(msg)
         fit_found = False
     msg = '{0}% HUK: {1}'.format(int(coh*100), th)
-    logging.info(msg)
+    # logging.info(msg)
     return {'A': A, 'B': B, 'T': th[0]}, th, fit_found
 
 def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):

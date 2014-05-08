@@ -18,15 +18,16 @@ def drift_diffusion((C, t), k):
     k relates the drift rate to C
 
     From Selen et al. (2012):
-        dX = kCdt + dW
-            X = choice {0, 1}
+        dDV = kCdt + dW
+            DV = decision variable
             C = coherence
             t = duration
             W = standard Brownian motion with unit variance over one second
         This yields (according to the paper):
-            f(X) = N(kCt, t) = gaussian with mean kCt, variance t
+            Let X := correctness variable, in {0, 1}
+            f(DV) = N(kCt, t) = gaussian with mean kCt, variance t
         =>
-            p(C, t) = P(X == 1 | C, t) = 1 - (f(X) <= 0) = 1 - F(0)
+            p(C, t) = P(X == 1 | C, t) = P(DV > 0) = 1 - F(0)
             n.b. F(0) = 0.5 + 0.5*erf(-kCt / sqrt(2*t))]
         =>
             p(C, t) = 1 - F(0) = 0.5 - 0.5*erf(-kCt / sqrt(2*t))
