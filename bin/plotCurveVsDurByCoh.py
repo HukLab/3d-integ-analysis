@@ -11,6 +11,7 @@ from dio import makefn
 from saturating_exponential import saturating_exp
 from drift_diffuse import drift_diffusion
 from session_info import all_subjs, good_subjects
+from sample import bootstrap_se
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -90,7 +91,9 @@ def pcor_curves(results, cohs, bins, cond, outfile):
             # yserr = pcor_curve_error(results[method], xs2, yf2)
             # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
         xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
+        ys_binned, yserr_binned = zip(*ys_binned)
         plt.plot(sec_to_ms(xs_binned), ys_binned, color=COL_MAP[cond], marker='o', linestyle='None')
+        plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=COL_MAP[cond])
         plt.xscale('log')
         # plt.xlim()
         plt.ylim(0.2, 1.1)
@@ -113,7 +116,8 @@ def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, t
         plt.errorbar(xs, ys, yerr=yerr, fmt=None, ecolor=col)
     plt.xscale('log')
     # plt.yscale('log')
-    plt.ylim(0, max(chain(*yss)))
+    if yss:
+        plt.ylim(0, max(chain(*yss)))
     # plt.legend()
     try:
         plt.tight_layout()
@@ -134,8 +138,7 @@ def param_curve_both_conds(results, cohs, outfile, key, title, ylabel):
     lbls = []
     
     def get_param_bounds(r, k):
-        vals = [x[k] for x in r]
-        v = np.std(vals, ddof=1) if len(vals) > 1 else 0.0 # ddof=1 => divide by N-1
+        v = bootstrap_se([x[k] for x in r])
         return v, v
 
     for cond, res in results.iteritems():

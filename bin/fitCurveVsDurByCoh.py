@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, FITS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FITS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
 from mle import pick_best_theta
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
@@ -125,7 +125,7 @@ def fit_curves(trials, bins):
             results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: huk_fit(ts, bins, coh, gs))
         if FITS['sat-exp']:
             results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: sat_exp_fit(ts, coh, gs))
-        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins)
+        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins, NBOOTS_BINNED_PS, include_se=True)
         results['ntrials'][coh] = len(ts_cur_coh)
     return results
 

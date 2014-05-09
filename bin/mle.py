@@ -29,7 +29,7 @@ def pick_best_theta(thetas):
 	if len(thetas) > 1:
 		ths = [th for th in thetas if close_enough(th['fun'], min_th['fun'])]
 		msg = '{0} out of {1} guesses found minima of {2}'.format(len(ths), len(thetas), min_th['fun'])
-		logging.info(msg)
+		# logging.info(msg)
 	return min_th['x']
 
 def keep_solution(theta, bnds, ymin):

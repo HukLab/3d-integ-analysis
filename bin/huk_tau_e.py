@@ -4,14 +4,11 @@ import logging
 import numpy as np
 from scipy.optimize import minimize
 
-from session_info import BINS
+from session_info import BINS, NBOOTS_BINNED_PS
 from saturating_exponential import saturating_exp
-from sample import bootstrap
+from sample import bootstrap, bootstrap_se
 
 logging.basicConfig(level=logging.DEBUG)
-
-NBOOTS = 1000
-mean = lambda xs: sum(x for x in xs)*1.0/len(xs)
 
 def bin_data(data, bins):
 	"""
@@ -35,23 +32,24 @@ def bin_data(data, bins):
 		rs_per_dur[l_bin].append(resp)
 	return rs_per_dur
 
-def binned_ps(data, durs, nboots=NBOOTS):
+def binned_ps(data, durs, nboots=NBOOTS_BINNED_PS, include_se=True):
 	resps_per_dur = bin_data(data, durs) # 0
 	resps_per_dur = dict((dur, rs) for dur, rs in resps_per_dur.iteritems() if rs) # remove empties
-	ps = dict((dur, find_p_per_dur(rs, nboots)) for dur, rs in resps_per_dur.iteritems())
-	return ps
+	return dict((dur, find_p_per_dur(rs, nboots, include_se)) for dur, rs in resps_per_dur.iteritems())
 
-def find_p_per_dur(rs, nboots):
-	rs = [int(r) for r in rs]
-	assert all([r in [0,1] for r in rs])
+def find_p_per_dur(rs, nboots, include_se):
+	assert set(rs) <= set([0.0, 1.0, 0, 1])
 	Rs = bootstrap(rs, nboots)
-	bs = [mean(rs) for rs in Rs]
-	return mean(bs)
+	bs = [np.mean(rs) for rs in Rs]
+	if include_se:
+		return np.mean(bs), bootstrap_se(bs)
+	else:
+		return np.mean(bs)
 
 def choose_A(durs, ps):
 	" average of last three "
 	durs = sorted(durs)
-	return mean([ps[dur] for dur in durs[-3:]])
+	return np.mean([ps[dur] for dur in durs[-3:]])
 
 def error(ps, A, B, tau):
 	return sum([math.pow(y - saturating_exp(x, A, B, tau), 2) for x, y in ps.iteritems()])
@@ -72,7 +70,7 @@ def write_bins(d, outfile):
 			rows = [[dur, r] for r in rs]
 			csvwriter.writerows(rows)
 
-def huk_tau_e(data, B=0.5, durs=BINS, guesses=None, nboots=NBOOTS):
+def huk_tau_e(data, B=0.5, durs=BINS, guesses=None, nboots=NBOOTS_BINNED_PS):
 	"""
 	data is list [(dur, resp), ...]
 		dur is floar
@@ -91,7 +89,7 @@ def huk_tau_e(data, B=0.5, durs=BINS, guesses=None, nboots=NBOOTS):
 	"""
 	if guesses is None:
 		guesses = get_guesses()
-	ps = binned_ps(data, durs, nboots)
+	ps = binned_ps(data, durs, nboots, False)
 	A = choose_A(ps.keys(), ps) # 2
 
 	bnds = [(0.0001, None)]

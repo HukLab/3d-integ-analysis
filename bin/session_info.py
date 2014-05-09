@@ -1,7 +1,8 @@
-NBOOTS = 5
+NBOOTS = 0
+NBOOTS_BINNED_PS = 1000 # also used by huk fit
 QUICK_FIT = True
-FITS = {'huk': False, 'sat-exp': False, 'drift': True}
-# FITS = {'huk': True, 'sat-exp': True, 'drift': True}
+# FITS = {'huk': False, 'sat-exp': False, 'drift': True}
+FITS = {'huk': True, 'sat-exp': True, 'drift': True}
 
 DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001, 'K': 0}
 
