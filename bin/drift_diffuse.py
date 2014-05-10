@@ -1,8 +1,6 @@
 import logging
 from math import sqrt, erf
 
-from scipy.optimize import minimize
-
 from mle import mle, log_likelihood
 
 logging.basicConfig(level=logging.DEBUG)

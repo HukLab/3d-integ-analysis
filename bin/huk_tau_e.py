@@ -1,4 +1,3 @@
-import math
 import logging
 
 import numpy as np
@@ -52,7 +51,7 @@ def choose_A(durs, ps):
 	return np.mean([ps[dur] for dur in durs[-3:]])
 
 def error(ps, A, B, tau):
-	return sum([math.pow(y - saturating_exp(x, A, B, tau), 2) for x, y in ps.iteritems()])
+	return sum([pow(y - saturating_exp(x, A, B, tau), 2) for x, y in ps.iteritems()])
 
 def error_fcn(ps, A, B):
 	return lambda tau: error(ps, A, B, tau)

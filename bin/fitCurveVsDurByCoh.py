@@ -7,13 +7,15 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FITS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FITS, FIT_IS_PER_COH, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
 from mle import pick_best_theta
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
 from huk_tau_e import binned_ps, huk_tau_e
 import saturating_exponential
 import drift_diffuse
+import quick_1974
+import twin_limb
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -31,6 +33,20 @@ def pickle_fit(results, bins, outfile, subj, cond):
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
+def quick_1974_fit(ts2, guesses=None):
+    fit_found = True
+    ths = quick_1974.fit(ts2, (None, None), quick=QUICK_FIT, guesses=guesses)
+    if ths:
+        th = pick_best_theta(ths)
+    else:
+        th = [DEFAULT_THETA['A2'], DEFAULT_THETA['B2']]
+        msg = 'No fits found for drift diffusion. Using A={0}, B={1}'.format(th[0], th[1])
+        fit_found = False
+        # logging.warning(msg)
+    msg = 'QUICK_1974: A={0}, B={1}'.format(th[0], th[1])
+    # logging.info(msg)
+    return {'A': th[0], 'B': th[1]}, th, fit_found
+
 def drift_fit(ts2, guesses=None):
     fit_found = True
     ths = drift_diffuse.fit(ts2, quick=QUICK_FIT, guesses=guesses)
@@ -45,7 +61,21 @@ def drift_fit(ts2, guesses=None):
     # logging.info(msg)
     return {'K': th[0]}, th, fit_found
 
-def sat_exp_fit(ts, coh, guesses=None):
+def twin_limb_fit(ts, bins, coh, guesses=None):
+    fit_found = True
+    ths = twin_limb.fit(ts, (None, None, None), quick=QUICK_FIT, guesses=guesses)
+    if ths:
+        th = pick_best_theta(ths)
+    else:
+        th = [DEFAULT_THETA['X0'], DEFAULT_THETA['S0'], DEFAULT_THETA['P']]
+        msg = 'No fits found for drift diffusion. Using X0={0}, S0={1}, P={2}'.format(th[0], th[1], th[2])
+        fit_found = False
+        # logging.warning(msg)
+    msg = 'DRIFT: X0={0}, S0={1}, P={2}'.format(th[0], th[1], th[2])
+    # logging.info(msg)
+    return {'X0': th[0], 'S0': th[1], 'P': th[2]}, th, fit_found
+
+def sat_exp_fit(ts, bins, coh, guesses=None):
     fit_found = True
     B = DEFAULT_THETA['B']
     ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT, guesses=guesses)
@@ -109,22 +139,25 @@ def fit_curves(trials, bins):
     results['ntrials'] = {}
     results['cohs'] = cohs
     results['fits'] = {}
-    if FITS['huk']:
-        results['fits']['huk'] = {}
-    if FITS['sat-exp']:
-        results['fits']['sat-exp'] = {}
     results['fits']['binned_pcor'] = {}
-    if FITS['drift']:
-        results['fits']['drift'] = bootstrap_fit_curves(ts_all, lambda ts, gs: drift_fit(ts, gs))
+
+    make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)
+    make_bootstrap_fcn_nocoh = lambda fcn: lambda ts, gs: fcn(ts, gs)
+    FIT_FCNS = {'drift': drift_fit, 'quick_1974': quick_1974_fit, 'huk': huk_fit, 'sat-exp': sat_exp_fit, 'twin-limb': twin_limb_fit}
+
+    for key in FITS:
+        if FITS[key] and FIT_IS_PER_COH[key]:
+            results['fits'][key] = bootstrap_fit_curves(ts_all, make_bootstrap_fcn_nocoh(FIT_FCNS[key]))
+        elif FITS[key]:
+            results['fits'][key] = {}
 
     for coh in cohs:
         ts = groups[coh]
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        if FITS['huk']:
-            results['fits']['huk'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: huk_fit(ts, bins, coh, gs))
-        if FITS['sat-exp']:
-            results['fits']['sat-exp'][coh] = bootstrap_fit_curves(ts_cur_coh, lambda ts, gs: sat_exp_fit(ts, coh, gs))
+        for key in FITS:
+            if FITS[key] and not FIT_IS_PER_COH[key]:
+                results['fits'][key][coh] = bootstrap_fit_curves(ts_cur_coh, make_bootstrap_fcn(FIT_FCNS[key], coh))
         results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins, NBOOTS_BINNED_PS, include_se=True)
         results['ntrials'][coh] = len(ts_cur_coh)
     return results

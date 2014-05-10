@@ -1,10 +1,9 @@
 NBOOTS = 0
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
 QUICK_FIT = True
-# FITS = {'huk': False, 'sat-exp': False, 'drift': True}
-FITS = {'huk': True, 'sat-exp': True, 'drift': True}
-
-DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001, 'K': 0}
+FITS = {'huk': True, 'sat-exp': True, 'drift': True, 'twin-limb': True, 'quick_1974': True}
+FIT_IS_PER_COH = {'huk': False, 'sat-exp': False, 'drift': True, 'twin-limb': False, 'quick_1974': True}
+DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001, 'K': 0, 'X0': 0.0, 'S0': 1.0, 'P': 0.0, 'A2': 0.0, 'B2': 0.0}
 
 BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 

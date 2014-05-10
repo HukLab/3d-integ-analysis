@@ -15,11 +15,11 @@ from sample import bootstrap_se
 
 logging.basicConfig(level=logging.DEBUG)
 
-METHODS = ['huk', 'sat-exp']
-NON_COH_METHODS = ['drift']
+METHODS = ['huk', 'sat-exp']#, 'twin-limb']
+NON_COH_METHODS = ['drift']#, 'quick_1979']
 COL_MAP = {'2d': 'g', '3d': 'r'}
 MKR_MAP = {'2d': 's', '3d': 's'}
-LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted'}
+LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted', 'twin-limb': 'solid', 'quick_1979': 'dashdot'}
 
 def pcor_curve_error(fits, xs, ys_fcn):
     """
