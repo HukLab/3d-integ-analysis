@@ -121,7 +121,7 @@ def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, t
     # plt.show()
     plt.savefig(outfile)
 
-def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
+def param_curve_both_conds(results, methods, outfile, key, title, ylabel):
     """ results keyed first by cond """
     xss = []
     yss = []
@@ -139,8 +139,7 @@ def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
         for method in methods:
             if method not in res:
                 continue
-            xs = [coh for coh in cohs if coh in res[method]] # just use res[method]?
-            1/0
+            xs = sorted(res[method].keys())
             xss.append(xs)
             if method in NON_COH_METHODS:
                 ys = [res[method][0][key]*coh for coh in xs]
@@ -184,21 +183,18 @@ def main(conds, subj, indir, outdir):
         raise Exception(msg)
     
     subjs = list(set(chain(*subjs_by_cond.values())))
-    cohs = []
     for subj in subjs:
         subj_conds = [cond for cond in conds if subj in subjs_by_cond[cond]]
         results_both = {}
         for cond in subj_conds:
             res = load_pickle(INDIR, subj, cond)
             outfiles = make_outfiles(OUTDIR, subj, cond)
-            if not cohs:
-                cohs = res['cohs']
             pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfiles['fit'])
             results_both[cond] = res['fits']
         outfiles = make_outfiles(OUTDIR, subj, 'cond')
         methods = ['sat-exp', 'huk']
-        param_curve_both_conds(results_both, cohs, methods, outfiles['A'], 'A', 'Saturation % correct per coherence', 'A')
-        param_curve_both_conds(results_both, cohs, methods, outfiles['tau'], 'T', 'Time constants per coherence', 'tau (ms)')
+        param_curve_both_conds(results_both, methods, outfiles['A'], 'A', 'Saturation % correct per coherence', 'A')
+        param_curve_both_conds(results_both, methods, outfiles['tau'], 'T', 'Time constants per coherence', 'tau (ms)')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
