@@ -8,18 +8,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dio import makefn
-from saturating_exponential import saturating_exp
-from drift_diffuse import drift_diffusion
 from session_info import all_subjs, good_subjects
 from sample import bootstrap_se
+from saturating_exponential import saturating_exp
+from drift_diffuse import drift_diffusion
+from quick_1974 import quick_1974
+from twin_limb import twin_limb
 
 logging.basicConfig(level=logging.DEBUG)
 
-METHODS = ['huk', 'sat-exp']#, 'twin-limb']
-NON_COH_METHODS = ['drift']#, 'quick_1979']
+METHODS = ['huk', 'sat-exp', 'twin-limb']
+NON_COH_METHODS = ['drift', 'quick_1974']
 COL_MAP = {'2d': 'g', '3d': 'r'}
 MKR_MAP = {'2d': 's', '3d': 's'}
-LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted', 'twin-limb': 'solid', 'quick_1979': 'dashdot'}
+LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted', 'twin-limb': 'solid', 'quick_1974': 'dashdot'}
 
 def pcor_curve_error(fits, xs, ys_fcn):
     """
@@ -55,7 +57,10 @@ def pcor_curves(results, cohs, bins, cond, outfile):
     # xs = np.linspace(min_dur, max_dur)
     xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
     yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
+    yfB = lambda x, th: [twin_limb(x, th['X0'], th['S0'], th['P']) for x in xs]
     yf2 = lambda xs, th: [drift_diffusion((C, x), th['K']) for (C, x) in xs]
+    yf2B = lambda xs, th: [quick_1974((C, x), th['A'], th['B']) for (C, x) in xs]
+    FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'quick_1974': yf2B}
 
     nrows = 3
     ncols = int((len(cohs)-0.5)/nrows)+1
@@ -67,27 +72,17 @@ def pcor_curves(results, cohs, bins, cond, outfile):
         plt.title('{0}% coherence'.format(int(coh*100)))
         plt.xlabel('duration (ms)')
         plt.ylabel('% correct')
-        for method in METHODS:
-            if method not in results:
-                continue
-            # plot_fit_hist(results[method][coh], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
-            ys = yf(xs, results[method][coh][0])
-            plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
-            for res in results[method][coh]:
-                ys = yf(xs, res)
-                plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
-            # yserr = pcor_curve_error(results[method][coh], xs, yf)
-            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
-        for method in NON_COH_METHODS:
-            if method not in results:
-                continue
+        for method in results:
+            if method in NON_COH_METHODS:
+                for res in results[method]:
+                    xs2 = [(coh, x) for x in xs]
+                    ys = FIT_FCNS[method](xs2, res)
+                    plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
+            elif method in METHODS:
+                for res in results[method][coh]:
+                    ys = FIT_FCNS[method](xs, res)
+                    plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
             # plot_fit_hist(results[method], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
-            xs2 = [(coh, x) for x in xs]
-            ys = yf2(xs2, results[method][0])
-            plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
-            for res in results[method]:
-                ys = yf2(xs2, res)
-                plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
             # yserr = pcor_curve_error(results[method], xs2, yf2)
             # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
         xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
@@ -126,9 +121,8 @@ def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, t
     # plt.show()
     plt.savefig(outfile)
 
-def param_curve_both_conds(results, cohs, outfile, key, title, ylabel):
+def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
     """ results keyed first by cond """
-    methods = METHODS
     xss = []
     yss = []
     yerrs = []
@@ -145,11 +139,11 @@ def param_curve_both_conds(results, cohs, outfile, key, title, ylabel):
         for method in methods:
             if method not in res:
                 continue
-            xs = [coh for coh in cohs if coh in res[method]]
+            xs = [coh for coh in cohs if coh in res[method]] # just use res[method]?
             xss.append(xs)
             if method in NON_COH_METHODS:
-                ys = [res[method][0]['K']*coh for coh in xs]
-                yerr = [get_param_bounds(res[method], 'K')*coh for coh in xs]
+                ys = [res[method][0][key]*coh for coh in xs]
+                yerr = [get_param_bounds(res[method], key)*coh for coh in xs]
             else:
                 # for coh in xs:
                 #     plot_fit_hist(res[method][coh], outfile.replace('.png', '_' + cond + '_' + str(coh) + '.png'))
@@ -201,8 +195,9 @@ def main(conds, subj, indir, outdir):
             pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfiles['fit'])
             results_both[cond] = res['fits']
         outfiles = make_outfiles(OUTDIR, subj, 'cond')
-        param_curve_both_conds(results_both, cohs, outfiles['A'], 'A', 'Saturation % correct per coherence', 'A')
-        param_curve_both_conds(results_both, cohs, outfiles['tau'], 'T', 'Time constants per coherence', 'tau (ms)')
+        methods = ['sat-exp', 'huk']
+        param_curve_both_conds(results_both, cohs, methods, outfiles['A'], 'A', 'Saturation % correct per coherence', 'A')
+        param_curve_both_conds(results_both, cohs, methods, outfiles['tau'], 'T', 'Time constants per coherence', 'tau (ms)')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
