@@ -10,7 +10,7 @@ CONSTRAINTS = []
 
 X0_GUESSES =  xrange(1, 2000, 50)
 S0_GUESSES =  [i/10.0 for i in xrange(1, 10)]
-P_GUESSES =  xrange(10)
+P_GUESSES =  [i/10.0 for i in xrange(1, 20)]
 
 def get_guesses(X0, S0, P):
     guesses = [X0_GUESSES, S0_GUESSES, P_GUESSES]

@@ -219,10 +219,10 @@ def by_subject(trials, conds, bins, outdir, subj=None):
             subjs = [subj]
         else:
             subjs = good_subjects[cond]
-        for subj in subjs:
-            trials = groups[(subj, cond)]
-            outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
-            fit(subj, cond, trials, bins, outfile)
+        for cur_subj in subjs:
+            trials = groups[(cur_subj, cond)]
+            outfile = makefn(outdir, cur_subj, cond, 'fit', 'pickle')
+            fit(cur_subj, cond, trials, bins, outfile)
 
 def across_subjects(trials, conds, bins, outdir):
     groups = group_trials(trials, dot_grouper, False)
