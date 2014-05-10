@@ -140,6 +140,7 @@ def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
             if method not in res:
                 continue
             xs = [coh for coh in cohs if coh in res[method]] # just use res[method]?
+            1/0
             xss.append(xs)
             if method in NON_COH_METHODS:
                 ys = [res[method][0][key]*coh for coh in xs]
