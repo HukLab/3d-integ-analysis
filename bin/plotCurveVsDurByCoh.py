@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dio import makefn
-from session_info import all_subjs, good_subjects
+from session_info import all_subjs, good_subjects, FIT_IS_PER_COH, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
 from sample import bootstrap_se
 from saturating_exponential import saturating_exp
 from drift_diffuse import drift_diffusion
@@ -17,11 +17,8 @@ from twin_limb import twin_limb
 
 logging.basicConfig(level=logging.DEBUG)
 
-METHODS = ['huk', 'sat-exp', 'twin-limb']
-NON_COH_METHODS = ['drift', 'quick_1974']
-COL_MAP = {'2d': 'g', '3d': 'r'}
-MKR_MAP = {'2d': 's', '3d': 's'}
-LIN_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted', 'twin-limb': 'solid', 'quick_1974': 'dashdot'}
+NON_COH_METHODS = [f for f, v in FIT_IS_PER_COH.iteritems() if v]
+METHODS = [f for f, v in FIT_IS_PER_COH.iteritems() if not v]
 
 def pcor_curve_error(fits, xs, ys_fcn):
     """
@@ -77,18 +74,18 @@ def pcor_curves(results, cohs, bins, cond, outfile):
                 for res in results[method]:
                     xs2 = [(coh, x) for x in xs]
                     ys = FIT_FCNS[method](xs2, res)
-                    plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
+                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond], linestyle=LINESTYLE_MAP[method], label=method.upper())
             elif method in METHODS:
                 for res in results[method][coh]:
                     ys = FIT_FCNS[method](xs, res)
-                    plt.plot(sec_to_ms(xs), ys, color=COL_MAP[cond], linestyle=LIN_MAP[method], label=method.upper())
+                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond], linestyle=LINESTYLE_MAP[method], label=method.upper())
             # plot_fit_hist(results[method], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             # yserr = pcor_curve_error(results[method], xs2, yf2)
-            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COL_MAP[cond])
+            # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COLOR_MAP[cond])
         xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
         ys_binned, yserr_binned = zip(*ys_binned)
-        plt.plot(sec_to_ms(xs_binned), ys_binned, color=COL_MAP[cond], marker='o', linestyle='None')
-        plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=COL_MAP[cond])
+        plt.plot(sec_to_ms(xs_binned), ys_binned, color=COLOR_MAP[cond], marker='o', linestyle='None')
+        plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=COLOR_MAP[cond])
         plt.xscale('log')
         # plt.xlim()
         plt.ylim(0.2, 1.1)
@@ -152,14 +149,14 @@ def param_curve_both_conds(results, methods, outfile, key, title, ylabel):
             yss.append(ys)
             yerrs.append(zip(*yerr)) # [lower_bounds, upper_bounds]
             lbl = '{0}-{1}'.format(cond, method)
-            cols.append(COL_MAP[cond])
-            mkrs.append(MKR_MAP[cond])
-            lins.append(LIN_MAP[method])
+            cols.append(COLOR_MAP[cond])
+            mkrs.append(MARKER_MAP[cond])
+            lins.append(LINESTYLE_MAP[method])
             lbls.append(lbl)
     param_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile, title, ylabel)
 
-def make_outfiles(outdir, subj, cond):
-    return {'fit': makefn(outdir, subj, cond, 'fit', 'png'), 'tau': makefn(outdir, subj, cond, 'tau', 'png'), 'A': makefn(outdir, subj, cond, 'A', 'png')}
+def make_outfile(outdir, subj, cond, key, filetype='png'):
+    return makefn(outdir, subj, cond, key, filetype)
 
 def load_pickle(indir, subj, cond):
     infile = os.path.join(indir, '{0}-{1}-fit.pickle'.format(subj, cond))
@@ -188,13 +185,13 @@ def main(conds, subj, indir, outdir):
         results_both = {}
         for cond in subj_conds:
             res = load_pickle(INDIR, subj, cond)
-            outfiles = make_outfiles(OUTDIR, subj, cond)
-            pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfiles['fit'])
+            outfile = make_outfile(OUTDIR, subj, cond, 'fit')
+            pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfile)
             results_both[cond] = res['fits']
-        outfiles = make_outfiles(OUTDIR, subj, 'cond')
-        methods = ['sat-exp', 'huk']
-        param_curve_both_conds(results_both, methods, outfiles['A'], 'A', 'Saturation % correct per coherence', 'A')
-        param_curve_both_conds(results_both, methods, outfiles['tau'], 'T', 'Time constants per coherence', 'tau (ms)')
+        param_curve_both_conds(results_both, ['twin-limb'], make_outfile(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0')
+        # methods = ['sat-exp', 'huk']
+        # param_curve_both_conds(results_both, methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
+        # param_curve_both_conds(results_both, methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")

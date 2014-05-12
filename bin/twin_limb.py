@@ -8,9 +8,9 @@ logging.basicConfig(level=logging.DEBUG)
 BOUNDS = {'X0': (0.0+APPROX_ZERO, None), 'S0': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'P': (None, None)}
 CONSTRAINTS = []
 
-X0_GUESSES =  xrange(1, 2000, 50)
-S0_GUESSES =  [i/10.0 for i in xrange(1, 10)]
-P_GUESSES =  [i/10.0 for i in xrange(1, 20)]
+X0_GUESSES =  [i/10.0 for i in xrange(1, 20, 4)]
+S0_GUESSES =  [i/10.0 for i in xrange(1, 10, 3)]
+P_GUESSES =  [i/10.0 for i in xrange(1, 10, 3)]
 
 def get_guesses(X0, S0, P):
     guesses = [X0_GUESSES, S0_GUESSES, P_GUESSES]

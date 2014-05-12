@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FITS, FIT_IS_PER_COH, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_PER_COH, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
 from mle import pick_best_theta
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
@@ -120,6 +120,8 @@ def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
     og_fit = fit_fcn(ts, None)
     guess = use_as_guess(og_fit) if og_fit[2] else None # will use initial solution as guess
     bootstrapped_fits = []
+    if nboots > 0:
+        logging.info('Bootstrapping {0} time(s)'.format(nboots))
     for tsb in bootstrap(ts, nboots):
         f = fit_fcn(tsb, guess)
         bootstrapped_fits.append(f)
@@ -131,7 +133,7 @@ def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
         fits = [og_fit[0]]
     return fits
 
-def fit_curves(trials, bins):
+def fit_curves(trials, bins, fits_to_fit):
     groups = group_trials(trials, coherence_grouper, False)
     ts_all = as_C_x_y(trials)
     cohs = sorted(groups)
@@ -145,30 +147,30 @@ def fit_curves(trials, bins):
     make_bootstrap_fcn_nocoh = lambda fcn: lambda ts, gs: fcn(ts, gs)
     FIT_FCNS = {'drift': drift_fit, 'quick_1974': quick_1974_fit, 'huk': huk_fit, 'sat-exp': sat_exp_fit, 'twin-limb': twin_limb_fit}
 
-    for key in FITS:
-        if FITS[key] and FIT_IS_PER_COH[key]:
+    for key in fits_to_fit:
+        if fits_to_fit[key] and FIT_IS_PER_COH[key]:
             results['fits'][key] = bootstrap_fit_curves(ts_all, make_bootstrap_fcn_nocoh(FIT_FCNS[key]))
-        elif FITS[key]:
+        elif fits_to_fit[key]:
             results['fits'][key] = {}
 
     for coh in cohs:
         ts = groups[coh]
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        for key in FITS:
-            if FITS[key] and not FIT_IS_PER_COH[key]:
+        for key in fits_to_fit:
+            if fits_to_fit[key] and not FIT_IS_PER_COH[key]:
                 results['fits'][key][coh] = bootstrap_fit_curves(ts_cur_coh, make_bootstrap_fcn(FIT_FCNS[key], coh))
         results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins, NBOOTS_BINNED_PS, include_se=True)
         results['ntrials'][coh] = len(ts_cur_coh)
     return results
 
-def fit_session_curves(trials, bins, subj, cond, pickle_outfile):
+def fit_session_curves(trials, bins, subj, cond, fits_to_fit, pickle_outfile):
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(trials), subj, cond)
     logging.info(msg)
     if not trials:
         logging.info('No graphs.')
         return
-    results = fit_curves(trials, bins)
+    results = fit_curves(trials, bins, fits_to_fit)
     pickle_fit(results, bins, pickle_outfile, subj, cond)
     return results
 
@@ -204,14 +206,14 @@ def remove_trials_by_coherence(trials, cond):
         cohs = good_cohs[cond]
         return [t for t in trials if t.coherence in cohs]
 
-def fit(subj, cond, trials, bins, outfile, resample=False):
+def fit(subj, cond, fits_to_fit, trials, bins, outfile, resample=False):
     trials = remove_bad_trials_by_session(trials, cond)
     trials = remove_trials_by_coherence(trials, cond)
     if resample:
         trials = sample_trials_by_session(trials, cond)
-    return fit_session_curves(trials, bins, subj, cond, outfile)
+    return fit_session_curves(trials, bins, subj, cond, fits_to_fit, outfile)
 
-def by_subject(trials, conds, bins, outdir, subj=None):
+def by_subject(trials, conds, fits_to_fit, bins, outdir, subj=None):
     groups = group_trials(trials, session_grouper, False)
     results = {}
     for cond in conds:
@@ -222,17 +224,17 @@ def by_subject(trials, conds, bins, outdir, subj=None):
         for cur_subj in subjs:
             trials = groups[(cur_subj, cond)]
             outfile = makefn(outdir, cur_subj, cond, 'fit', 'pickle')
-            fit(cur_subj, cond, trials, bins, outfile)
+            fit(cur_subj, cond, fits_to_fit, trials, bins, outfile)
 
-def across_subjects(trials, conds, bins, outdir):
+def across_subjects(trials, conds, fits_to_fit, bins, outdir):
     groups = group_trials(trials, dot_grouper, False)
     subj = 'ALL'
     for cond in conds:
         trials = groups[cond]
         outfile = makefn(outdir, subj, cond, 'fit', 'pickle')
-        fit(subj, cond, trials, bins, outfile, resample=True)
+        fit(subj, cond, fits_to_fit, trials, bins, outfile, resample=True)
 
-def main(conds, subj, outdir):
+def main(conds, subj, fits_to_fit, outdir):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     INFILE = os.path.join(BASEDIR, 'data.json')
@@ -241,24 +243,29 @@ def main(conds, subj, outdir):
     if subj == 'ALL':
         bins = list(np.logspace(np.log10(min(BINS)), np.log10(max(BINS)), 50)) # lots of bins for fun
         bins[0] = BINS[0] # to ensure lower bound on data
-        across_subjects(TRIALS, conds, bins, OUTDIR)
+        across_subjects(TRIALS, conds, fits_to_fit, bins, OUTDIR)
     elif subj == 'SUBJECT':
-        by_subject(TRIALS, conds, BINS, OUTDIR)
+        by_subject(TRIALS, conds, fits_to_fit, BINS, OUTDIR)
     elif subj in all_subjs:
-        by_subject(TRIALS, conds, BINS, OUTDIR, subj=subj)
+        by_subject(TRIALS, conds, fits_to_fit, BINS, OUTDIR, subj=subj)
     else:
         msg = "subj {0} not recognized".format(subj)
         logging.error(msg)
         raise Exception(msg)
 
+ALL_FITS = FIT_IS_PER_COH.keys()
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
 parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
 parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="SUBJECT fits for each subject, ALL combines data and fits all at once. Or specify subject like HUK")
+parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
 args = parser.parse_args()
 
+def fits_fit(fits, all_fits):
+    return dict((fit, fit in fits) for fit in all_fits)
+
 if __name__ == '__main__':
-    main(args.conds, args.subj, args.outdir)
+    main(args.conds, args.subj, fits_fit(args.fits, ALL_FITS), args.outdir)
     """
     NOTE: See http://courses.washington.edu/matlab1/Lesson_5.html
     """
