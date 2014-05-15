@@ -12,10 +12,10 @@ BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 
 all_subjs = ['huk', 'klb', 'krm', 'lnk', 'lkc']
 good_subjects = {
-    '2d': ['huk', 'lnk'],
-    '3d': ['huk', 'lnk', 'lkc'],
-    # '2d': ['huk', 'klb', 'krm', 'lnk'],
-    # '3d': ['huk', 'klb', 'krm', 'lnk', 'lkc'],
+    # '2d': ['huk', 'lnk'],
+    # '3d': ['huk', 'lnk', 'lkc'],
+    '2d': ['huk', 'klb', 'krm', 'lnk'],
+    '3d': ['huk', 'klb', 'krm', 'lnk', 'lkc'],
 }
 
 bad_sessions = {
@@ -27,9 +27,10 @@ bad_sessions = {
     },
     '3d': {
         'huk': [],
-        'klb': [],
+        'klb': range(1, 106),
         'krm': [],
-        'lnk': [5],
+        'lnk': [],
+        # 'lnk': [5],
         'lkc': [],
     }
 }

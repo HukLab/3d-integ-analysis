@@ -24,13 +24,13 @@ def log_likelihood(arr, fcn, thetas):
     return val
 
 def pick_best_theta(thetas):
-	close_enough = lambda x,y: abs(x-y) < APPROX_ZERO
-	min_th = min(thetas, key=lambda d: d['fun'])
-	if len(thetas) > 1:
-		ths = [th for th in thetas if close_enough(th['fun'], min_th['fun'])]
-		msg = '{0} out of {1} guesses found minima of {2}'.format(len(ths), len(thetas), min_th['fun'])
-		# logging.info(msg)
-	return min_th['x']
+    close_enough = lambda x,y: abs(x-y) < APPROX_ZERO
+    min_th = min(thetas, key=lambda d: d['fun'])
+    if len(thetas) > 1:
+        ths = [th for th in thetas if close_enough(th['fun'], min_th['fun'])]
+        msg = '{0} out of {1} guesses found minima of {2}'.format(len(ths), len(thetas), min_th['fun'])
+        # logging.info(msg)
+    return min_th['x']
 
 def keep_solution(theta, bnds, ymin):
     """
@@ -52,33 +52,33 @@ def keep_solution(theta, bnds, ymin):
     return not any([at_bounds(th, bnd) for th, bnd in zip(theta['x'], bnds)])
 
 def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=False, method='TNC'):
-	"""
-	data is list [(dur, resp)]
-		dur is float
-		resp is bool
-	quick is bool
-		chooses the first solution not touching the bounds
-	method is str
-		bounds only for: L-BFGS-B, TNC, SLSQP
-		constraints only for: COBYLA, SLSQP
-		NOTE: SLSQP tends to give a lot of run-time errors...
-	"""
-	if len(data) == 0 or len(guesses) == 0:
-		return None
-	if bounds is None:
-		bounds = []
-	if constraints is None:
-		constraints = []
+    """
+    data is list [(dur, resp)]
+        dur is float
+        resp is bool
+    quick is bool
+        chooses the first solution not touching the bounds
+    method is str
+        bounds only for: L-BFGS-B, TNC, SLSQP
+        constraints only for: COBYLA, SLSQP
+        NOTE: SLSQP tends to give a lot of run-time errors...
+    """
+    if len(data) == 0 or len(guesses) == 0:
+        return None
+    if bounds is None:
+        bounds = []
+    if constraints is None:
+        constraints = []
 
-	thetas = []
-	ymin = float('inf')
-	for guess in guesses:
-		theta = minimize(log_likelihood_fcn, guess, method=method, bounds=bounds, constraints=constraints)
-		if keep_solution(theta, bounds, ymin):
-			ymin = theta['fun']
-			thetas.append(theta)
-			if quick:
-				return thetas
-			msg = '{0}, {1}'.format(theta['x'], theta['fun'])
-			logging.info(msg)
-	return thetas
+    thetas = []
+    ymin = float('inf')
+    for guess in guesses:
+        theta = minimize(log_likelihood_fcn, guess, method=method, bounds=bounds, constraints=constraints)
+        if keep_solution(theta, bounds, ymin):
+            ymin = theta['fun']
+            thetas.append(theta)
+            if quick:
+                return thetas
+            msg = '{0}, {1}'.format(theta['x'], theta['fun'])
+            logging.info(msg)
+    return thetas

@@ -22,6 +22,8 @@ def get_guesses(A, B, T):
         guesses = [A_GUESSES, T_GUESSES]
     elif A is not None and B is not None and T is None:
         guesses = [T_GUESSES]
+    elif A is None and B is not None and T is not None:
+        guesses = [A_GUESSES]
     else:
         msg = "SAT-EXP incorrectly defined."
         logging.error(msg)
@@ -46,6 +48,8 @@ def log_likelihood_fcn(data, (A, B, T)):
         return lambda theta: -log_likelihood(data, saturating_exp, (theta[0], B, theta[1]))
     elif A is not None and B is not None and T is None:
         return lambda theta: -log_likelihood(data, saturating_exp, (A, B, theta[0]))
+    elif A is None and B is not None and T is not None:
+        return lambda theta: -log_likelihood(data, saturating_exp, (theta[0], B, T))
     else:
         msg = "SAT-EXP incorrectly defined."
         logging.error(msg)
