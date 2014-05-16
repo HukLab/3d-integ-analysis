@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 def bin_data(data, bins):
 	"""
 	if bins = [x_1, x_2, ..., x_n]
-		then bins like [x_1, x_2), [x_2, x_3), ...
+		then bins like [x_1, x_2), [x_2, x_3), ..., [x_n-1, x_n]
 	"""
 	assert bins == sorted(bins)
 	assert not(any([x for x,y in data if x < bins[0] or x > bins[-1]]))
@@ -23,11 +23,11 @@ def bin_data(data, bins):
 	l_bin = bins[i]
 	r_bin = bins[i+1]
 	for (dur, resp) in data:
-		while dur >= r_bin:
+		while dur >= r_bin and dur != bins[-1]:
 			i += 1
 			l_bin = bins[i]
 			r_bin = bins[i+1]
-		assert l_bin <= dur < r_bin
+		assert l_bin <= dur < r_bin or (l_bin <= dur <= r_bin and dur == bins[-1])
 		rs_per_dur[l_bin].append(resp)
 	return rs_per_dur
 

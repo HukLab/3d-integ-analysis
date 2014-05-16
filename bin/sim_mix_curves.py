@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from tools import color_list
 import saturating_exponential
 import huk_tau_e
 
-satexp = lambda x, (a, b, t): a - (a-b)*np.exp(-x/t)
-satexp_rand = lambda x, (a, b, t): np.random.binomial(1, satexp(x, (a,b,t)))
+satexp_rand = lambda x, (a, b, t): np.random.binomial(1, saturating_exponential.saturating_exp(x,a,b,t))
 rand_sign = lambda: np.random.randint(2)*2 - 1
 first_above = lambda x, As_sorted: next(a for a in As_sorted if a >= x)
 first_below = lambda x, As_sorted: next(a for a in reversed(As_sorted) if a <= x)
@@ -20,36 +20,38 @@ max_dur = 2.0
 
 N = 1000*1
 nbins = 10
-xs = np.logspace(np.log10(min_dur), np.log10(max_dur), N)*1000
-quantiles = np.percentile(xs, 100*np.arange(0, 1 + 1.0/nbins, 1.0/nbins))
-bins = [(quantiles[i], quantiles[i+1]) for i in xrange(len(quantiles)-1)]
+xs = np.linspace(min_dur, max_dur, N)
+# xs = np.logspace(np.log10(min_dur), np.log10(max_dur), N)
+pcts = 100*np.arange(0.1, 1.0, 1.0/nbins)
+quantiles = np.percentile(xs, pcts)
+bins = [min_dur] + [q for q in quantiles] + [max_dur]
 
 Agoals = [A + 1/(delta*2.0) for A in As]
-N2 = N
+N2 = N/5
 
 def simulate_data():
     """
     generate N trials for len(As) curves with saturation points at As
     """
     curves = {}
-    for A in As:
+    for A in sorted(As):
         curves[A] = [(x, satexp_rand(x, (A, B, T))) for x in xs]
     return curves
 
-def interpolate_curves(curves, bins, nperbin):
-    As_sorted = sorted(curves.keys())
+def interpolate_curves(curves, fit_map, bins, nperbin):
+    bins_lr = [(bins[i], bins[i+1]) for i in xrange(len(bins)-1)]
+    As_sorted = sorted(fit_map.keys()) # want to use fitted As, not original ones
     goal_curves = {}
-    for A in Agoals:
+    for A in sorted(Agoals):
         try:
             a2, a1 = first_above(A, As_sorted), first_below(A, As_sorted)
         except StopIteration:
             continue
-        c1 = curves[a1]
-        c2 = curves[a2]
+        c1 = curves[fit_map[a1]]
+        c2 = curves[fit_map[a2]]
         p = interpolate_p(A, a1, a2) # refers to probability of picking from c2
-        print A, (a1, a2, p)
         data = []
-        for (lbin, rbin) in bins:
+        for (lbin, rbin) in bins_lr:
             c1bin = [(x,y) for x,y in c1 if lbin <= x < rbin] # between lbin, rbin
             c2bin = [(x,y) for x,y in c2 if lbin <= x < rbin] # between lbin, rbin
             c1bininds, nc2bininds = xrange(len(c1bin)), xrange(len(c2bin))
@@ -58,55 +60,54 @@ def interpolate_curves(curves, bins, nperbin):
         goal_curves[A] = data
     return goal_curves
 
-def ps_bin_data(data, bins):
-    ps = []
-    for (lbin, rbin) in bins:
-        databin = [y for x,y in data if lbin <= x < rbin] # between lbin, rbin
-        ps.append((lbin, np.mean(databin)))
-    return ps
-
 def fit(cs, bins):
     fs, bs = [], []
-    for a, data in cs.iteritems():
-        bindata = ps_bin_data(data, bins)
+    fit_map = {}
+    for a in sorted(cs):
+        data = cs[a]
+        bindata = huk_tau_e.binned_ps(data, bins)
+        bindata = zip([i for i in sorted(bindata)], [bindata[i][0] for i in sorted(bindata)])
         bs.append(bindata)
 
         # th = saturating_exponential.fit(data, (None, B, None), quick=True)[0]
         # Tf = th['x'][1]
-        # th = saturating_exponential.fit(data, (None, B, T), quick=False, guesses=[(a,)])[0]
-        # Af = th['x'][0]
+        # th = saturating_exponential.fit(data, (None, B, T), quick=True, guesses=[(a,)])
+        # if not th:
+        #     Af = 0.5
+        # else:
+        #     Af = th[0]['x'][0]
 
         # bns = [l for l,r in bins]
-        # th, Af = huk_tau_e.huk_tau_e(data, B, bns)
-        # Tf = th[0]['x'][0]
+        th, Af = huk_tau_e.huk_tau_e(data, B, bins)
+        Tf = th[0]['x'][0]
+        print (T, Tf)
         # Af = np.mean(zip(*bindata[-2:])[1])
         # print (Af, np.mean(zip(*bindata[-2:])[1]))
         
         print (a, Af)
-        df = [(x, satexp(x, (Af, B, T))) for x in xs]
+        fit_map[Af] = a
+        df = [(x, saturating_exponential.saturating_exp(x, Af, B, T)) for x in xs]
         fs.append(df)
-    return fs, bs
+    return fs, bs, fit_map
 
-def plot(fitdata, bindata, clr):
-    for f, b in zip(fitdata, bindata):
+def plot(fitdata, bindata, clrs, lin='solid'):
+    for f, b, clr in zip(fitdata, bindata, clrs):
         xsf, ysf = zip(*f)
-        plt.plot(xsf, ysf, color=clr)
+        plt.plot(xsf, ysf, color=clr, linestyle=lin)
         xsb, ysb = zip(*b)
-        plt.scatter(xsb, ysb, color=clr)
+        plt.scatter(xsb, ysb, color=clr, linestyle=lin)
 
 def main():
     curves = simulate_data()
-    goal_curves = interpolate_curves(curves, bins, N2)
+    f1, b1, fit_map = fit(curves, bins)
     print '---'
-    f1, b1 = fit(curves, bins)
-    print '---'
-    f2, b2 = fit(goal_curves, bins)
+    goal_curves = interpolate_curves(curves, fit_map, bins, N2)
+    f2, b2, _ = fit(goal_curves, bins)
 
     plt.clf()
-    plot(f1, b1, 'b')
-    plot(f2, b2, 'r')
+    plot(f1, b1, color_list(len(f1)))
+    plot(f2, b2, color_list(len(f1)), 'dashed')
     plt.title('')
-    # plt.xscale('log')
     plt.xlabel('time (ms)')
     plt.ylabel('% correct')
     plt.xlim([min(xs), max(xs)])

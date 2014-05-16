@@ -115,7 +115,7 @@ def main(outfile, nrepeats=10, nmults=10):
     """
     compare models for various multiples of the original sample size
     """
-    raise Excpetion(ERROR_MESSAGE)
+    raise Exception(ERROR_MESSAGE)
     rows = []
     for mult in range(1, nmults+1):
         for i in xrange(nrepeats):
