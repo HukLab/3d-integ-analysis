@@ -20,7 +20,8 @@ good_subjects = {
 
 bad_sessions = {
     '2d': {
-        'huk': [8],
+        'huk': [],
+        # 'huk': [8],
         'klb': [1, 12, 15, 16, 17, 18, 19, 20],
         'krm': [],
         'lnk': [],

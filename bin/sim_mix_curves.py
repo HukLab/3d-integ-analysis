@@ -60,7 +60,7 @@ def interpolate_curves(curves, fit_map, bins, nperbin):
         goal_curves[A] = data
     return goal_curves
 
-def fit(cs, bins):
+def fit(cs, bins, fit=1):
     fs, bs = [], []
     fit_map = {}
     for a in sorted(cs):
@@ -69,21 +69,19 @@ def fit(cs, bins):
         bindata = zip([i for i in sorted(bindata)], [bindata[i][0] for i in sorted(bindata)])
         bs.append(bindata)
 
-        # th = saturating_exponential.fit(data, (None, B, None), quick=True)[0]
-        # Tf = th['x'][1]
-        # th = saturating_exponential.fit(data, (None, B, T), quick=True, guesses=[(a,)])
-        # if not th:
-        #     Af = 0.5
-        # else:
-        #     Af = th[0]['x'][0]
+        if fit == 0:
+            th = saturating_exponential.fit(data, (None, B, T), quick=True, guesses=[(a,)])
+            if not th:
+                Af = 0.5
+            else:
+                Af = th[0]['x'][0]
+        elif fit == 1:
+            th, Af = huk_tau_e.huk_tau_e(data, B, bins)
+            Tf = th[0]['x'][0]
+            print (T, Tf)
+        else:
+            Af = np.mean(zip(*bindata[-2:])[1])
 
-        # bns = [l for l,r in bins]
-        th, Af = huk_tau_e.huk_tau_e(data, B, bins)
-        Tf = th[0]['x'][0]
-        print (T, Tf)
-        # Af = np.mean(zip(*bindata[-2:])[1])
-        # print (Af, np.mean(zip(*bindata[-2:])[1]))
-        
         print (a, Af)
         fit_map[Af] = a
         df = [(x, saturating_exponential.saturating_exp(x, Af, B, T)) for x in xs]
