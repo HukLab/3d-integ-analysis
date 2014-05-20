@@ -55,7 +55,7 @@ def pcor_curves(results, cohs, bins, cond, outfile):
     xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
     yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
     yfB = lambda x, th: [twin_limb(x, th['X0'], th['S0'], th['P']) for x in xs]
-    yf2 = lambda xs, th: [drift_diffusion((C, x), th['K']) for (C, x) in xs]
+    yf2 = lambda xs, th: [drift_diffusion((C, x), th['K'], th['X0']) for (C, x) in xs]
     yf2B = lambda xs, th: [quick_1974((C, x), th['A'], th['B']) for (C, x) in xs]
     FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'quick_1974': yf2B}
 

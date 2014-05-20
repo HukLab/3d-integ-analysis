@@ -39,7 +39,7 @@ def quick_1974_fit(ts2, guesses=None):
     if ths:
         th = pick_best_theta(ths)
     else:
-        th = [DEFAULT_THETA['A2'], DEFAULT_THETA['B2']]
+        th = [DEFAULT_THETA['quick_1974']['A'], DEFAULT_THETA['quick_1974']['B']]
         msg = 'No fits found for drift diffusion. Using A={0}, B={1}'.format(th[0], th[1])
         fit_found = False
         # logging.warning(msg)
@@ -49,17 +49,18 @@ def quick_1974_fit(ts2, guesses=None):
 
 def drift_fit(ts2, guesses=None):
     fit_found = True
-    ths = drift_diffuse.fit(ts2, quick=QUICK_FIT, guesses=guesses)
+    X0 = DEFAULT_THETA['drift']['X0']
+    ths = drift_diffuse.fit(ts2, (None, X0), quick=QUICK_FIT, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
-        th = [DEFAULT_THETA['K']]
-        msg = 'No fits found for drift diffusion. Using k={0}'.format(th[0])
+        th = [DEFAULT_THETA['drift']['K']]
+        msg = 'No fits found for drift diffusion. Using K={0}'.format(th[0])
         fit_found = False
         # logging.warning(msg)
-    msg = 'DRIFT: k={0}'.format(th[0])
+    msg = 'DRIFT: K={0}'.format(th[0])
     # logging.info(msg)
-    return {'K': th[0]}, th, fit_found
+    return {'K': th[0], 'X0': X0}, th, fit_found
 
 def twin_limb_fit(ts, bins, coh, guesses=None):
     fit_found = True
@@ -67,7 +68,7 @@ def twin_limb_fit(ts, bins, coh, guesses=None):
     if ths:
         th = pick_best_theta(ths)
     else:
-        th = [DEFAULT_THETA['X0'], DEFAULT_THETA['S0'], DEFAULT_THETA['P']]
+        th = [DEFAULT_THETA['twin-limb']['X0'], DEFAULT_THETA['twin-limb']['S0'], DEFAULT_THETA['twin-limb']['P']]
         msg = 'No fits found for drift diffusion. Using X0={0}, S0={1}, P={2}'.format(th[0], th[1], th[2])
         fit_found = False
         # logging.warning(msg)
@@ -77,7 +78,7 @@ def twin_limb_fit(ts, bins, coh, guesses=None):
 
 def sat_exp_fit(ts, bins, coh, guesses=None):
     fit_found = True
-    B = DEFAULT_THETA['B']
+    B = DEFAULT_THETA['huk']['B']
     ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
@@ -86,22 +87,22 @@ def sat_exp_fit(ts, bins, coh, guesses=None):
         # logging.info(msg)
         # ths = saturating_exponential.fit(ts, (None, None, None), quick=QUICK_FIT)
         if not ths:
-            msg = 'No fits found. Using {0}'.format(DEFAULT_THETA)
+            msg = 'No fits found. Using {0}'.format(DEFAULT_THETA['sat-exp'])
             # logging.warning(msg)
             fit_found = False
-            th = [DEFAULT_THETA['A'], DEFAULT_THETA['T']]
+            th = [DEFAULT_THETA['sat-exp']['A'], DEFAULT_THETA['sat-exp']['T']]
     msg = '{0}% SAT_EXP: {1}'.format(int(coh*100), th)
     # logging.info(msg)
     return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}, th, fit_found
 
 def huk_fit(ts, bins, coh, guesses=None):
     fit_found = True
-    B = DEFAULT_THETA['B']
+    B = DEFAULT_THETA['huk']['B']
     ths, A = huk_tau_e(ts, B=B, durs=bins, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
-        th = [DEFAULT_THETA['T']]
+        th = [DEFAULT_THETA['huk']['T']]
         msg = 'No fits found for huk-fit. Using tau={0}.'.format(th[0])
         # logging.warning(msg)
         fit_found = False

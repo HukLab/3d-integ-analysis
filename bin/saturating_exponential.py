@@ -15,7 +15,7 @@ T_GUESSES = [1000, 500, 250, 100, 50, 10]
 BOUNDS = {'A': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'B': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'T': (0.0+APPROX_ZERO, None)}
 CONSTRAINTS = [] # [{'type': 'ineq', 'fun': lambda theta: theta[0] - theta[1]}] # A > B
 
-def get_guesses(A, B, T):
+def get_guesses((A, B, T)):
     if A is None and B is None and T is None:
         guesses = [A_GUESSES, B_GUESSES, T_GUESSES]
     elif A is None and B is not None and T is None:
@@ -63,7 +63,7 @@ def fit(data, (A, B, T), quick, guesses=None, method='TNC'):
     """
     thetas = (A, B, T)
     if guesses is None:
-        guesses = get_guesses(A, B, T)
+        guesses = get_guesses(thetas)
     bounds = [BOUNDS[key] for key, val in zip(['A', 'B', 'T'], [A, B, T]) if val is None]
     constraints = CONSTRAINTS
     return mle(data, log_likelihood_fcn(data, thetas), guesses, bounds, constraints, quick, method)

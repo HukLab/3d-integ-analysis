@@ -9,7 +9,7 @@ from sample import bootstrap, bootstrap_se
 from session_info import bad_sessions, all_subjs
 from summaries import session_grouper, group_trials
 
-def plot(ress, subj):
+def plot(ress, subj, outfile):
     width = 0.5
     fig, ax = plt.subplots()
     cols = ['g', 'r']
@@ -26,6 +26,7 @@ def plot(ress, subj):
     plt.title('Sequential Effects for {0}'.format(subj))
     plt.xlabel('outcome of trial N')
     plt.ylabel('probability of choosing R on trial N+1')
+    plt.savefig(outfile)
     plt.show()
 
 def bootstrap_mean_and_se(bools, trials, NBOOTS=1000):
@@ -50,28 +51,24 @@ def sequential_effects(t1chosen, t1correct, sess_ids):
 
     # prob R given Right Hit
     bools = t1chosen & t1correct & extras
-    res['R_RH'] = bootstrap_mean_and_se(bools, t1chosen)
+    res['RH'] = bootstrap_mean_and_se(bools, t1chosen)
 
     # prob R given Right Miss
     bools = t1chosen & ~t1correct & extras
-    res['R_RM'] = bootstrap_mean_and_se(bools, t1chosen)
+    res['RM'] = bootstrap_mean_and_se(bools, t1chosen)
 
     # prob R given Left Hit
     bools = ~t1chosen & t1correct & extras
-    res['R_LH'] = bootstrap_mean_and_se(bools, t1chosen)
+    res['LH'] = bootstrap_mean_and_se(bools, t1chosen)
 
     # prob R given Left Miss
     bools = ~t1chosen & ~t1correct & extras
-    res['R_LM'] = bootstrap_mean_and_se(bools, t1chosen)
+    res['LM'] = bootstrap_mean_and_se(bools, t1chosen)
 
     return res
 
-def load(subj, conds):
-    CURDIR = os.path.dirname(os.path.abspath(__file__))
-    BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
-    INFILE = os.path.join(BASEDIR, 'data.json')
-    TRIALS = load_json(INFILE)
-    groups = group_trials(TRIALS, session_grouper, False)
+def load(trials, subj, conds):
+    groups = group_trials(trials, session_grouper, False)
 
     ds = {}
     for cond in conds:
@@ -86,17 +83,25 @@ def load_random():
     t1correct = [np.random.binomial(1, 0.2) for _ in xrange(N)]
     return {'rand': [t1chosen, t1correct, None]}
 
-def main(subj, conds):
-    ds = load(subj, conds)
+def main(subj, conds, outdir):
+    CURDIR = os.path.dirname(os.path.abspath(__file__))
+    BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
+    INFILE = os.path.join(BASEDIR, 'data.json')
+    OUTDIR = os.path.join(BASEDIR, 'res', 'sequential-effects', outdir)
+    TRIALS = load_json(INFILE)
+    outfile = os.path.join(OUTDIR, '{0}-{1}.png'.format(subj, '_'.join(conds)))
+
+    ds = load(TRIALS, subj, conds)
     print 'Loaded'
     ress = dict((cond, sequential_effects(*d)) for cond, d in ds.iteritems())
     print 'Calculated'
-    plot(ress, subj)
+    plot(ress, subj, outfile)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', "--conds", type=str, nargs='*', default=['2d', '3d'], choices=['2d', '3d'], help="condition")
 parser.add_argument('-s', "--subj", type=str, choices=all_subjs, help="subject name")
+parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    main(args.subj, args.conds)
+    main(args.subj, args.conds, args.outdir)
