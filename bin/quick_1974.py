@@ -1,20 +1,13 @@
-import logging
-import itertools
-from math import exp
+from numpy import exp
 
-from mle import mle, log_likelihood, APPROX_ZERO
+from mle import fit_mle, APPROX_ZERO
 
-logging.basicConfig(level=logging.DEBUG)
-
+THETA_ORDER = ['A', 'B']
 BOUNDS = {'A': (0.0+APPROX_ZERO, 100.0-APPROX_ZERO), 'B': (None, None)}
-CONSTRAINTS = []
-
 A_GUESSES = xrange(1, 100, 10)
 B_GUESSES = xrange(10)
-
-def get_guesses(A, B):
-    guesses = [A_GUESSES, B_GUESSES]
-    return list(itertools.product(*guesses))
+GUESSES = {'A': A_GUESSES, 'B': B_GUESSES}
+CONSTRAINTS = []
 
 def quick_1974((C, t), A, B):
     """
@@ -27,18 +20,5 @@ def quick_1974((C, t), A, B):
     """
     return 1 - 0.5*exp(-pow(C/A, B))
 
-def log_likelihood_fcn(data, (A, B)):
-    return lambda theta: -log_likelihood(data, quick_1974, (theta[0], theta[1]))
-
-def fit(data, (A, B), quick, guesses=None, method='TNC'):
-    """
-    (A, B) are numerics
-        the model parameters
-        if None, they will be fit
-    """
-    thetas = (A, B)
-    if guesses is None:
-        guesses = get_guesses(A, B)
-    bounds = [BOUNDS[key] for key, val in zip(['A', 'B'], [A, B]) if val is None]
-    constraints = CONSTRAINTS
-    return mle(data, log_likelihood_fcn(data, thetas), guesses, bounds, constraints, quick, method)
+def fit(data, thetas, quick=False, guesses=None, method='TNC'):
+    return fit_mle(data, quick_1974, thetas, THETA_ORDER, GUESSES, BOUNDS, CONSTRAINTS, quick, guesses, method)

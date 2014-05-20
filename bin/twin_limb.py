@@ -1,22 +1,14 @@
-import logging
-import itertools
-
 from mle import mle, log_likelihood, APPROX_ZERO
 
-logging.basicConfig(level=logging.DEBUG)
-
+THETA_ORDER = ['X0', 'S0', 'P']
 BOUNDS = {'X0': (0.0+APPROX_ZERO, None), 'S0': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'P': (None, None)}
-CONSTRAINTS = []
-
 X0_GUESSES =  [i/10.0 for i in xrange(1, 20, 4)]
 S0_GUESSES =  [i/10.0 for i in xrange(1, 10, 3)]
 P_GUESSES =  [i/10.0 for i in xrange(1, 10, 3)]
+GUESSES = {'X0': X0_GUESSES, 'S0': S0_GUESSES, 'P': P_GUESSES}
+CONSTRAINTS = []
 
-def get_guesses(X0, S0, P):
-    guesses = [X0_GUESSES, S0_GUESSES, P_GUESSES]
-    return list(itertools.product(*guesses))
-
-def twin_limb(x, x0, S0, p):
+def twin_limb(x, X0, S0, P):
     """
     p is the slope at which the value increases
     x0 is the time at which the value plateaus
@@ -29,20 +21,7 @@ def twin_limb(x, x0, S0, p):
                     S0            | x >= x0
                 }
     """
-    return S0 if x >= x0 else S0*pow(x*1.0/x0, p)
+    return S0 if x >= X0 else S0*pow(x*1.0/X0, P)
 
-def log_likelihood_fcn(data, (X0, S0, P)):
-    return lambda theta: -log_likelihood(data, twin_limb, (theta[0], theta[1], theta[2]))
-
-def fit(data, (X0, S0, P), quick, guesses=None, method='TNC'):
-    """
-    (X0, S0, P) are numerics
-        the model parameters
-        if None, they will be fit
-    """
-    thetas = (X0, S0, P)
-    if guesses is None:
-        guesses = get_guesses(X0, S0, P)
-    bounds = [BOUNDS[key] for key, val in zip(['X0', 'S0', 'P'], [X0, S0, P]) if val is None]
-    constraints = CONSTRAINTS
-    return mle(data, log_likelihood_fcn(data, thetas), guesses, bounds, constraints, quick, method)
+def fit(data, thetas, quick=False, guesses=None, method='TNC'):
+    return fit_mle(data, twin_limb, thetas, THETA_ORDER, GUESSES, BOUNDS, CONSTRAINTS, quick, guesses, method)

@@ -8,7 +8,7 @@ import numpy as np
 
 from dio import load_json, makefn
 from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_PER_COH, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
-from mle import pick_best_theta
+from mle import pick_best_theta, generic_fit
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
 from huk_tau_e import binned_ps, huk_tau_e
@@ -32,68 +32,6 @@ def pickle_fit(results, bins, outfile, subj, cond):
     out['cond'] = cond
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
-
-def quick_1974_fit(ts2, guesses=None):
-    fit_found = True
-    ths = quick_1974.fit(ts2, (None, None), quick=QUICK_FIT, guesses=guesses)
-    if ths:
-        th = pick_best_theta(ths)
-    else:
-        th = [DEFAULT_THETA['quick_1974']['A'], DEFAULT_THETA['quick_1974']['B']]
-        msg = 'No fits found for drift diffusion. Using A={0}, B={1}'.format(th[0], th[1])
-        fit_found = False
-        # logging.warning(msg)
-    msg = 'QUICK_1974: A={0}, B={1}'.format(th[0], th[1])
-    # logging.info(msg)
-    return {'A': th[0], 'B': th[1]}, th, fit_found
-
-def drift_fit(ts2, guesses=None):
-    fit_found = True
-    X0 = DEFAULT_THETA['drift']['X0']
-    ths = drift_diffuse.fit(ts2, (None, X0), quick=QUICK_FIT, guesses=guesses)
-    if ths:
-        th = pick_best_theta(ths)
-    else:
-        th = [DEFAULT_THETA['drift']['K']]
-        msg = 'No fits found for drift diffusion. Using K={0}'.format(th[0])
-        fit_found = False
-        # logging.warning(msg)
-    msg = 'DRIFT: K={0}'.format(th[0])
-    # logging.info(msg)
-    return {'K': th[0], 'X0': X0}, th, fit_found
-
-def twin_limb_fit(ts, bins, coh, guesses=None):
-    fit_found = True
-    ths = twin_limb.fit(ts, (None, None, None), quick=QUICK_FIT, guesses=guesses)
-    if ths:
-        th = pick_best_theta(ths)
-    else:
-        th = [DEFAULT_THETA['twin-limb']['X0'], DEFAULT_THETA['twin-limb']['S0'], DEFAULT_THETA['twin-limb']['P']]
-        msg = 'No fits found for drift diffusion. Using X0={0}, S0={1}, P={2}'.format(th[0], th[1], th[2])
-        fit_found = False
-        # logging.warning(msg)
-    msg = 'DRIFT: X0={0}, S0={1}, P={2}'.format(th[0], th[1], th[2])
-    # logging.info(msg)
-    return {'X0': th[0], 'S0': th[1], 'P': th[2]}, th, fit_found
-
-def sat_exp_fit(ts, bins, coh, guesses=None):
-    fit_found = True
-    B = DEFAULT_THETA['huk']['B']
-    ths = saturating_exponential.fit(ts, (None, B, None), quick=QUICK_FIT, guesses=guesses)
-    if ths:
-        th = pick_best_theta(ths)
-    else:
-        msg = 'No fits found for sat-exp with fixed B={0}. Letting B vary.'.format(B)
-        # logging.info(msg)
-        # ths = saturating_exponential.fit(ts, (None, None, None), quick=QUICK_FIT)
-        if not ths:
-            msg = 'No fits found. Using {0}'.format(DEFAULT_THETA['sat-exp'])
-            # logging.warning(msg)
-            fit_found = False
-            th = [DEFAULT_THETA['sat-exp']['A'], DEFAULT_THETA['sat-exp']['T']]
-    msg = '{0}% SAT_EXP: {1}'.format(int(coh*100), th)
-    # logging.info(msg)
-    return {'A': th[0], 'B': B if len(th) == 2 else th[1], 'T': th[-1]}, th, fit_found
 
 def huk_fit(ts, bins, coh, guesses=None):
     fit_found = True
@@ -145,12 +83,18 @@ def fit_curves(trials, bins, fits_to_fit):
     results['fits']['binned_pcor'] = {}
 
     make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)
-    make_bootstrap_fcn_nocoh = lambda fcn: lambda ts, gs: fcn(ts, gs)
-    FIT_FCNS = {'drift': drift_fit, 'quick_1974': quick_1974_fit, 'huk': huk_fit, 'sat-exp': sat_exp_fit, 'twin-limb': twin_limb_fit}
+    fit_wrapper = lambda x,y,z,w: (lambda ts, bins, coh, gs: generic_fit(x,y,z,w, QUICK_FIT, ts, bins, coh, gs))
+    FIT_FCNS = {
+        'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, (True, False), DEFAULT_THETA['drift']),
+        'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, (True, True), DEFAULT_THETA['quick_1974']),
+        'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, (True, False, True), DEFAULT_THETA['sat-exp']),
+        'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, (True, True, True), DEFAULT_THETA['twin-limb']),
+        'huk': huk_fit,
+    }
 
     for key in fits_to_fit:
         if fits_to_fit[key] and FIT_IS_PER_COH[key]:
-            results['fits'][key] = bootstrap_fit_curves(ts_all, make_bootstrap_fcn_nocoh(FIT_FCNS[key]))
+            results['fits'][key] = bootstrap_fit_curves(ts_all, make_bootstrap_fcn(FIT_FCNS[key], 0))
         elif fits_to_fit[key]:
             results['fits'][key] = {}
 

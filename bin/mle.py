@@ -8,11 +8,40 @@ logging.basicConfig(level=logging.DEBUG)
 
 APPROX_ZERO = 0.0001
 
+add_dicts = lambda a, b: dict(a.items() + b.items())
+make_dict = lambda key_order, thetas: dict(zip(key_order, thetas))
+
+def theta_to_dict(thetas, theta_key_order, theta):
+    thetas_lookup = make_dict(theta_key_order, thetas)
+    thetas_preset = dict((key, val) for key, val in thetas_lookup.iteritems() if val is not None)
+    keys_left = [key for key in theta_key_order if thetas_lookup[key] is None]
+    return add_dicts(thetas_preset, make_dict(keys_left, theta))
+
+def generic_fit(fcn, theta_key_order, thetas_to_fit, theta_defaults, quick, ts, bins, coh, guesses=None):
+    """
+    theta_key_order is e.g. ['A', 'B', 'T']
+    theta_fit_defaults is e.g. (True, False, True)
+    theta_defaults is e.g. {'A': 1.0, 'B': 0.5, 'T': 100.0}
+    """
+    fit_found = True
+    thetas = [None if d else theta_defaults[t] for t, d in zip(theta_key_order, thetas_to_fit)]
+    ths = fcn(ts, thetas, quick=quick, guesses=guesses)
+    if ths:
+        th = pick_best_theta(ths)
+    else:
+        msg = 'No fits found. Using {0}'.format(theta_defaults)
+        # logging.warning(msg)
+        fit_found = False
+        th = [theta_defaults[t] for t, d in zip(theta_key_order, thetas_to_fit) if d]
+    msg = '{0}% {2}: {1}'.format(int(coh*100), th, '[current fit]')
+    # logging.info(msg)
+    return theta_to_dict(thetas, theta_key_order, th), th, fit_found
+
 def make_guesses(thetas, theta_key_order, guesses_lookup):
-    thetas = dict(zip(theta_key_order, thetas))
+    thetas_lookup = make_dict(theta_key_order, thetas)
     guesses = []
     for key in theta_key_order:
-        if thetas[key] is None:
+        if thetas_lookup[key] is None:
             guesses.append(guesses_lookup[key])
     return list(itertools.product(*guesses)) # cartesian product
 
@@ -39,12 +68,10 @@ def log_likelihood(arr, fcn, thetas):
     return val
 
 def log_likelihood_factory(data, fcn, thetas, theta_key_order):
-    add_dicts = lambda a, b: dict(a.items() + b.items())
-    make_dict = lambda ts, key_order: dict(zip(theta_key_order, ts))
-    thetas_lookup = dict(zip(theta_key_order, thetas))
+    thetas_lookup = make_dict(theta_key_order, thetas)
     thetas_preset = dict((key, val) for key, val in thetas_lookup.iteritems() if val is not None)
     keys_left = [key for key in theta_key_order if thetas_lookup[key] is None]
-    return lambda theta: -log_likelihood(data, fcn, add_dicts(thetas_preset, make_dict(theta, keys_left)))
+    return lambda theta: -log_likelihood(data, fcn, add_dicts(thetas_preset, make_dict(keys_left, theta)))
 
 def pick_best_theta(thetas):
     close_enough = lambda x,y: abs(x-y) < APPROX_ZERO
@@ -106,13 +133,7 @@ def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=
             logging.info(msg)
     return thetas
 
-def fit(data, log_likelihood_fcn, thetas, theta_key_order, guesses_lookup, bounds_lookup, constraints, quick=False, guesses=None, method='TNC'):
-    if guesses is None:
-        guesses = make_guesses(thetas, theta_key_order, guesses_lookup)
-    bounds = make_bounds(thetas, theta_key_order, bounds_lookup)
-    return mle(data, log_likelihood_fcn(data, thetas), guesses, bounds, constraints, quick, method)
-
-def fit2(data, inner_likelihood_fcn, thetas, theta_key_order, guesses_lookup, bounds_lookup, constraints, quick=False, guesses=None, method='TNC'):
+def fit_mle(data, inner_likelihood_fcn, thetas, theta_key_order, guesses_lookup, bounds_lookup, constraints, quick=False, guesses=None, method='TNC'):
     if guesses is None:
         guesses = make_guesses(thetas, theta_key_order, guesses_lookup)
     bounds = make_bounds(thetas, theta_key_order, bounds_lookup)

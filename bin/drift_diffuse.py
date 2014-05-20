@@ -1,9 +1,9 @@
 from math import sqrt, erf
 
-import mle
+from mle import APPROX_ZERO, fit_mle
 
 THETA_ORDER = ['K', 'X0']
-BOUNDS = {'K': (None, None), 'X0': (None, 0.04-mle.APPROX_ZERO)}
+BOUNDS = {'K': (None, None), 'X0': (None, 0.04-APPROX_ZERO)}
 GUESSES = {'K': [i/10.0 for i in xrange(1, 10)], 'X0': [0.0, 0.02, 0.04]}
 CONSTRAINTS = []
 
@@ -31,4 +31,4 @@ def drift_diffusion((C, t), K, X0):
     return 0.5 - 0.5*erf(-K*C*(t-X0) / sqrt(2*(t-X0)))
 
 def fit(data, thetas, quick=False, guesses=None, method='TNC'):
-    return mle.fit2(data, drift_diffusion, thetas, THETA_ORDER, GUESSES, BOUNDS, CONSTRAINTS, quick, guesses, method)
+    return fit_mle(data, drift_diffusion, thetas, THETA_ORDER, GUESSES, BOUNDS, CONSTRAINTS, quick, guesses, method)
