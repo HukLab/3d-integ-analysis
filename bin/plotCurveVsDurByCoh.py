@@ -74,17 +74,17 @@ def pcor_curves(results, cohs, bins, cond, outfile):
                 for res in results[method]:
                     xs2 = [(coh, x) for x in xs]
                     ys = FIT_FCNS[method](xs2, res)
-                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond], linestyle=LINESTYLE_MAP[method], label=method.upper())
+                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond], linewidth=2, linestyle=LINESTYLE_MAP[method], label=method.upper())
             elif method in METHODS:
                 for res in results[method][coh]:
                     ys = FIT_FCNS[method](xs, res)
-                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond], linestyle=LINESTYLE_MAP[method], label=method.upper())
+                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond],  linewidth=2, linestyle=LINESTYLE_MAP[method], label=method.upper())
             # plot_fit_hist(results[method], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             # yserr = pcor_curve_error(results[method], xs2, yf2)
             # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COLOR_MAP[cond])
         xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
         ys_binned, yserr_binned = zip(*ys_binned)
-        plt.plot(sec_to_ms(xs_binned), ys_binned, color=COLOR_MAP[cond], marker='o', linestyle='None')
+        plt.plot(sec_to_ms(xs_binned), ys_binned, color=COLOR_MAP[cond], marker='.', linestyle='None')
         plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=COLOR_MAP[cond])
         plt.xscale('log')
         # plt.xlim()
@@ -118,7 +118,7 @@ def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, t
     # plt.show()
     plt.savefig(outfile)
 
-def param_curve_both_conds(results, methods, outfile, key, title, ylabel):
+def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
     """ results keyed first by cond """
     xss = []
     yss = []
@@ -136,11 +136,11 @@ def param_curve_both_conds(results, methods, outfile, key, title, ylabel):
         for method in methods:
             if method not in res:
                 continue
-            xs = sorted(res[method].keys())
+            xs = cohs # sorted(res[method].keys())
             xss.append(xs)
             if method in NON_COH_METHODS:
                 ys = [res[method][0][key]*coh for coh in xs]
-                yerr = [get_param_bounds(res[method], key)*coh for coh in xs]
+                yerr = [[coh*x for x in get_param_bounds(res[method], key)] for coh in xs]
             else:
                 # for coh in xs:
                 #     plot_fit_hist(res[method][coh], outfile.replace('.png', '_' + cond + '_' + str(coh) + '.png'))
@@ -188,10 +188,11 @@ def main(conds, subj, indir, outdir):
             outfile = make_outfile(OUTDIR, subj, cond, 'fit')
             pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfile)
             results_both[cond] = res['fits']
-        param_curve_both_conds(results_both, ['twin-limb'], make_outfile(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0')
+        param_curve_both_conds(results_both, res['cohs'], ['drift'], make_outfile(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh')
+        # param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], make_outfile(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0')
         # methods = ['sat-exp', 'huk']
-        # param_curve_both_conds(results_both, methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
-        # param_curve_both_conds(results_both, methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
+        # param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
+        # param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")

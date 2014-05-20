@@ -256,7 +256,7 @@ def main(conds, subj, fits_to_fit, outdir):
 ALL_FITS = FIT_IS_PER_COH.keys()
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
-parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
+parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="2D or 3D or both.")
 parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="SUBJECT fits for each subject, ALL combines data and fits all at once. Or specify subject like HUK")
 parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
 args = parser.parse_args()

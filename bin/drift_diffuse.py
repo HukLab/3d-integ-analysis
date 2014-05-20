@@ -9,7 +9,7 @@ BOUNDS = [(None, None)]
 GUESSES = [i/10.0 for i in xrange(1, 10)]
 CONSTRAINTS = []
 
-def drift_diffusion((C, t), k):
+def drift_diffusion((C, t), k, X0=0.038):
     """
     t is duration
     C is coherence
@@ -30,7 +30,7 @@ def drift_diffusion((C, t), k):
         =>
             p(C, t) = 1 - F(0) = 0.5 - 0.5*erf(-kCt / sqrt(2*t))
     """
-    return 0.5 - 0.5*erf(-k*C*t / sqrt(2*t))
+    return 0.5 - 0.5*erf(-k*C*(t-X0) / sqrt(2*(t-X0)))
 
 def log_likelihood_fcn(data):
     return lambda theta: -log_likelihood(data, drift_diffusion, [theta])

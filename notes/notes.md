@@ -113,5 +113,24 @@ x Why black and white dots?
 	=> But what if the 2d motion dots were also 3d in a cylinder? That way seeing depth is required in both (b/c disparity and motion processing interact; see: Domini et al 2003)
 
 ---------------------------------------
-TO DO
+05/15/14
 ---------------------------------------
+
+fix proportion correct and _then_ plot taus--i.e. tau vs coh-index instead of straight-up coh
+    fix X% correct, blend curves above and below
+    => one tau per condition per subject
+play with different duration bins
+
+Say given X, cohA has pA and cohB has pB.
+    Then if you're sampling from each with probability p...call it W.
+        X = B(1, pA)
+        Y = B(1, pB)
+        Z = B(1, p)
+    We want to know W = ZX + (1-Z)Y
+        W ~ B(1, p*pA + (1-p)*pB) = B(1, p(pA - pB) + pB)
+
+        W has mean p(pA - pB) + pB and variance (p(pA - pB) + pB)*(1-(p(pA - pB) + pB))
+    Thus solutions for p given pA, pB, such that W has mean P...
+        P = p(pA - pB) + pB
+            => p = (P-pB)/(pA-pB)
+

@@ -88,12 +88,23 @@ def fit(cs, bins, fit=1):
         fs.append(df)
     return fs, bs, fit_map
 
-def plot(fitdata, bindata, clrs, lin='solid'):
+def plot_inner(fitdata, bindata, clrs, lin='solid'):
     for f, b, clr in zip(fitdata, bindata, clrs):
         xsf, ysf = zip(*f)
         plt.plot(xsf, ysf, color=clr, linestyle=lin)
         xsb, ysb = zip(*b)
         plt.scatter(xsb, ysb, color=clr, linestyle=lin)
+
+def plot((f1, b1), (f2, b2)):
+    plt.clf()
+    plot_inner(f1, b1, color_list(len(f1)))
+    plot_inner(f2, b2, color_list(len(f1)), 'dashed')
+    plt.title('')
+    plt.xlabel('time (ms)')
+    plt.ylabel('% correct')
+    plt.xlim([min(xs), max(xs)])
+    plt.ylim([0.4, 1.0])
+    plt.show()
 
 def main():
     curves = simulate_data()
@@ -101,16 +112,7 @@ def main():
     print '---'
     goal_curves = interpolate_curves(curves, fit_map, bins, N2)
     f2, b2, _ = fit(goal_curves, bins)
-
-    plt.clf()
-    plot(f1, b1, color_list(len(f1)))
-    plot(f2, b2, color_list(len(f1)), 'dashed')
-    plt.title('')
-    plt.xlabel('time (ms)')
-    plt.ylabel('% correct')
-    plt.xlim([min(xs), max(xs)])
-    plt.ylim([0.4, 1.0])
-    plt.show()
+    plot((f1, b1), (f2, b2))
 
 if __name__ == '__main__':
     main()

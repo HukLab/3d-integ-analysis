@@ -1,10 +1,10 @@
-QUICK_FIT = False
-NBOOTS = 10
+QUICK_FIT = True
+NBOOTS = 0
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
 FIT_IS_PER_COH = {'huk': False, 'sat-exp': False, 'drift': True, 'twin-limb': False, 'quick_1974': True}
 DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001, 'K': 0, 'X0': 0.0, 'S0': 1.0, 'P': 0.0, 'A2': 0.0, 'B2': 0.0}
 
-LINESTYLE_MAP = {'huk': 'dashed', 'sat-exp': 'solid', 'drift': 'dotted', 'twin-limb': 'solid', 'quick_1974': 'dashdot'}
+LINESTYLE_MAP = {'huk': 'dotted', 'sat-exp': 'solid', 'drift': 'dashed', 'twin-limb': 'solid', 'quick_1974': 'dashdot'}
 COLOR_MAP = {'2d': 'g', '3d': 'r'}
 MARKER_MAP = {'2d': 's', '3d': 's'}
 
@@ -20,9 +20,8 @@ good_subjects = {
 
 bad_sessions = {
     '2d': {
-        'huk': [],
-        # 'huk': [8],
-        'klb': [1, 12, 15, 16, 17, 18, 19, 20],
+        'huk': [], #[8],
+        'klb': [], #[1, 12, 15, 16, 17, 18, 19, 20],
         'krm': [],
         'lnk': [],
     },
@@ -30,8 +29,7 @@ bad_sessions = {
         'huk': [],
         'klb': range(1, 106),
         'krm': [],
-        'lnk': [],
-        # 'lnk': [5],
+        'lnk': [], #[5],
         'lkc': [],
     }
 }
