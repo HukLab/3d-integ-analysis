@@ -20,19 +20,19 @@ def theta_to_dict(thetas, theta_key_order, theta):
 def generic_fit(fcn, theta_key_order, thetas_to_fit, theta_defaults, quick, ts, bins, coh, guesses=None):
     """
     theta_key_order is e.g. ['A', 'B', 'T']
-    theta_fit_defaults is e.g. (True, False, True)
+    thetas_to_fit is e.g. {'A': True, 'B': False, 'T': True}
     theta_defaults is e.g. {'A': 1.0, 'B': 0.5, 'T': 100.0}
     """
     fit_found = True
-    thetas = [None if d else theta_defaults[t] for t, d in zip(theta_key_order, thetas_to_fit)]
+    thetas = [None if thetas_to_fit[t] else theta_defaults[t] for t in theta_key_order]
     ths = fcn(ts, thetas, quick=quick, guesses=guesses)
     if ths:
         th = pick_best_theta(ths)
     else:
         msg = 'No fits found. Using {0}'.format(theta_defaults)
-        # logging.warning(msg)
+        logging.warning(msg)
         fit_found = False
-        th = [theta_defaults[t] for t, d in zip(theta_key_order, thetas_to_fit) if d]
+        th = [theta_defaults[t] for t in theta_key_order if thetas_to_fit[t]]
     msg = '{0}% {2}: {1}'.format(int(coh*100), th, '[current fit]')
     # logging.info(msg)
     return theta_to_dict(thetas, theta_key_order, th), th, fit_found
@@ -66,12 +66,6 @@ def log_likelihood(arr, fcn, thetas):
     log_likeli = lambda row: np.log(likelihood(row))
     val = sum(map(log_likeli, arr))
     return val
-
-def log_likelihood_factory(data, fcn, thetas, theta_key_order):
-    thetas_lookup = make_dict(theta_key_order, thetas)
-    thetas_preset = dict((key, val) for key, val in thetas_lookup.iteritems() if val is not None)
-    keys_left = [key for key in theta_key_order if thetas_lookup[key] is None]
-    return lambda theta: -log_likelihood(data, fcn, add_dicts(thetas_preset, make_dict(keys_left, theta)))
 
 def pick_best_theta(thetas):
     close_enough = lambda x,y: abs(x-y) < APPROX_ZERO
@@ -128,10 +122,67 @@ def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=
             ymin = theta['fun']
             thetas.append(theta)
             if quick:
+                logging.info(theta)
                 return thetas
             msg = '{0}, {1}'.format(theta['x'], theta['fun'])
             logging.info(msg)
     return thetas
+
+def log_likelihood_factory(data, fcn, thetas, theta_key_order):
+    """
+    I am so sorry.
+    This whole function makes me sad.
+    The bottom portion
+
+    is what I wanted,
+    but it is inefficient.
+    Thus the shit below.
+    """
+    presets = [x is not None for x in thetas]
+    if len(presets) == 3:
+        if presets == [1,0,0]:
+            return lambda t: -log_likelihood(data, fcn, (thetas[0], t[0], t[1]))
+        elif presets == [0,1,0]:
+            return lambda t: -log_likelihood(data, fcn, (t[0], thetas[1], t[1]))
+        elif presets == [0,0,1]:
+            return lambda t: -log_likelihood(data, fcn, (t[0], t[1], thetas[2]))
+        elif presets == [1,1,0]:
+            return lambda t: -log_likelihood(data, fcn, (thetas[0], thetas[1], t[0]))
+        elif presets == [1,0,1]:
+            return lambda t: -log_likelihood(data, fcn, (thetas[0], t[0], thetas[2]))
+        elif presets == [0,1,1]:
+            return lambda t: -log_likelihood(data, fcn, (t[0], thetas[1], thetas[2]))
+        elif presets == [0,0,0]:
+            return lambda t: -log_likelihood(data, fcn, (t[0], t[1], t[2]))
+        else:
+            raise Exception("MLE ERROR: Internal.")
+    elif len(presets) == 2:
+        if presets == [1,0]:
+            return lambda t: -log_likelihood(data, fcn, (thetas[0], t[0]))
+        elif presets == [0,1]:
+            return lambda t: -log_likelihood(data, fcn, (t[0], thetas[1]))
+        elif presets == [0,0]:
+            return lambda t: -log_likelihood(data, fcn, (t[0], t[1]))
+        else:
+            raise Exception("MLE ERROR: Internal.")
+        # [1,0] or [1,1] or [0,0]
+    elif len(presets) == 1:
+        if presets == [1]:
+            return lambda t: -log_likelihood(data, fcn, (thetas[0],))
+        elif presets == [0]:
+            return lambda t: -log_likelihood(data, fcn, (t[0],))
+        else:
+            raise Exception("MLE ERROR: Internal.")
+    else:
+        raise Exception("MLE ERROR: Too many parameters in fitting method.")
+
+    """
+    This next part is much shorter than the above, but...it's slower. The lambda function has to make all those dicts on each evaluation!
+    """
+    thetas_lookup = make_dict(theta_key_order, thetas)
+    thetas_preset = dict((key, val) for key, val in thetas_lookup.iteritems() if val is not None)
+    keys_left = [key for key in theta_key_order if thetas_lookup[key] is None]
+    return lambda theta: -log_likelihood(data, fcn, add_dicts(thetas_preset, make_dict(keys_left, theta)))
 
 def fit_mle(data, inner_likelihood_fcn, thetas, theta_key_order, guesses_lookup, bounds_lookup, constraints, quick=False, guesses=None, method='TNC'):
     if guesses is None:

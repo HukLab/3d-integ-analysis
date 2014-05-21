@@ -8,17 +8,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dio import makefn
-from session_info import all_subjs, good_subjects, FIT_IS_PER_COH, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
+from session_info import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
 from sample import bootstrap_se
 from saturating_exponential import saturating_exp
-from drift_diffuse import drift_diffusion
+from drift_diffuse import drift_diffusion, drift_diffusion_2
 from quick_1974 import quick_1974
 from twin_limb import twin_limb
 
 logging.basicConfig(level=logging.DEBUG)
 
-NON_COH_METHODS = [f for f, v in FIT_IS_PER_COH.iteritems() if v]
-METHODS = [f for f, v in FIT_IS_PER_COH.iteritems() if not v]
+NON_COH_METHODS = [f for f, v in FIT_IS_COHLESS.iteritems() if v]
+METHODS = [f for f, v in FIT_IS_COHLESS.iteritems() if not v]
 
 def pcor_curve_error(fits, xs, ys_fcn):
     """
@@ -56,7 +56,9 @@ def pcor_curves(results, cohs, bins, cond, outfile):
     yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
     yfB = lambda x, th: [twin_limb(x, th['X0'], th['S0'], th['P']) for x in xs]
     yf2 = lambda xs, th: [drift_diffusion((C, x), th['K'], th['X0']) for (C, x) in xs]
+    yf22 = lambda xs, th: [drift_diffusion_2(x, th['K'], th['X0']) for x in xs]
     yf2B = lambda xs, th: [quick_1974((C, x), th['A'], th['B']) for (C, x) in xs]
+    # FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf22, 'quick_1974': yf2B}
     FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'quick_1974': yf2B}
 
     nrows = 3

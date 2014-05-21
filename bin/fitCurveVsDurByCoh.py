@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_PER_COH, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_COHLESS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT, THETAS_TO_FIT
 from mle import pick_best_theta, generic_fit
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
@@ -33,21 +33,6 @@ def pickle_fit(results, bins, outfile, subj, cond):
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
 
-def huk_fit(ts, bins, coh, guesses=None):
-    fit_found = True
-    B = DEFAULT_THETA['huk']['B']
-    ths, A = huk_tau_e(ts, B=B, durs=bins, guesses=guesses)
-    if ths:
-        th = pick_best_theta(ths)
-    else:
-        th = [DEFAULT_THETA['huk']['T']]
-        msg = 'No fits found for huk-fit. Using tau={0}.'.format(th[0])
-        # logging.warning(msg)
-        fit_found = False
-    msg = '{0}% HUK: {1}'.format(int(coh*100), th)
-    # logging.info(msg)
-    return {'A': A, 'B': B, 'T': th[0]}, th, fit_found
-
 def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
     """
     ts is trials
@@ -72,6 +57,21 @@ def bootstrap_fit_curves(ts, fit_fcn, nboots=NBOOTS):
         fits = [og_fit[0]]
     return fits
 
+def huk_fit(ts, bins, coh, guesses=None):
+    fit_found = True
+    B = DEFAULT_THETA['huk']['B']
+    ths, A = huk_tau_e(ts, B=B, durs=bins, guesses=guesses)
+    if ths:
+        th = pick_best_theta(ths)
+    else:
+        th = [DEFAULT_THETA['huk']['T']]
+        msg = 'No fits found for huk-fit. Using tau={0}.'.format(th[0])
+        logging.warning(msg)
+        fit_found = False
+    msg = '{0}% HUK: {1}'.format(int(coh*100), th)
+    # logging.info(msg)
+    return {'A': A, 'B': B, 'T': th[0]}, th, fit_found
+
 def fit_curves(trials, bins, fits_to_fit):
     groups = group_trials(trials, coherence_grouper, False)
     ts_all = as_C_x_y(trials)
@@ -85,15 +85,16 @@ def fit_curves(trials, bins, fits_to_fit):
     make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)
     fit_wrapper = lambda x,y,z,w: (lambda ts, bins, coh, gs: generic_fit(x,y,z,w, QUICK_FIT, ts, bins, coh, gs))
     FIT_FCNS = {
-        'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, (True, False), DEFAULT_THETA['drift']),
-        'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, (True, True), DEFAULT_THETA['quick_1974']),
-        'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, (True, False, True), DEFAULT_THETA['sat-exp']),
-        'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, (True, True, True), DEFAULT_THETA['twin-limb']),
+        'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
+        # 'drift': fit_wrapper(drift_diffuse.fit_2, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
+        'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
+        'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, THETAS_TO_FIT['sat-exp'], DEFAULT_THETA['sat-exp']),
+        'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
         'huk': huk_fit,
     }
 
     for key in fits_to_fit:
-        if fits_to_fit[key] and FIT_IS_PER_COH[key]:
+        if fits_to_fit[key] and FIT_IS_COHLESS[key]:
             results['fits'][key] = bootstrap_fit_curves(ts_all, make_bootstrap_fcn(FIT_FCNS[key], 0))
         elif fits_to_fit[key]:
             results['fits'][key] = {}
@@ -103,7 +104,7 @@ def fit_curves(trials, bins, fits_to_fit):
         ts_cur_coh = as_x_y(ts)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
         for key in fits_to_fit:
-            if fits_to_fit[key] and not FIT_IS_PER_COH[key]:
+            if fits_to_fit[key] and not FIT_IS_COHLESS[key]:
                 results['fits'][key][coh] = bootstrap_fit_curves(ts_cur_coh, make_bootstrap_fcn(FIT_FCNS[key], coh))
         results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins, NBOOTS_BINNED_PS, include_se=True)
         results['ntrials'][coh] = len(ts_cur_coh)
@@ -198,7 +199,7 @@ def main(conds, subj, fits_to_fit, outdir):
         logging.error(msg)
         raise Exception(msg)
 
-ALL_FITS = FIT_IS_PER_COH.keys()
+ALL_FITS = FIT_IS_COHLESS.keys()
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
 parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="2D or 3D or both.")

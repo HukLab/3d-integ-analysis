@@ -1,16 +1,35 @@
-QUICK_FIT = True
 NBOOTS = 0
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
-FIT_IS_PER_COH = {'huk': False, 'sat-exp': False, 'drift': True, 'twin-limb': False, 'quick_1974': True}
+
+QUICK_FIT = True
+FIT_IS_COHLESS = {
+    'huk': False,
+    'sat-exp': False,
+    'drift': True,# False, -> enable drift_diffusion_2
+    'twin-limb': False,
+    'quick_1974': True,
+}
 DEFAULT_THETA = {
     'huk': {'A': 1.0, 'B': 0.5, 'T': 0.001},
     'sat-exp': {'A': 1.0, 'B': 0.5, 'T': 0.001},
-    'drift': {'K': 0.0, 'X0': 0.038},
+    'drift': {'K': 12.705, 'X0': 0.04}, # 12.705 9.816
     'twin-limb': {'X0': 0.0, 'S0': 1.0, 'P': 0.0},
     'quick_1974': {'A': 0.0, 'B': 0.0},
 }
+THETAS_TO_FIT = {
+    'sat-exp': {'A': True, 'B': False, 'T': True},
+    'drift': {'K': True, 'X0': False},
+    'twin-limb': {'X0': True, 'S0': True, 'P': True},
+    'quick_1974': {'A': True, 'B': True},
+}
 
-LINESTYLE_MAP = {'huk': 'dotted', 'sat-exp': 'solid', 'drift': 'dashed', 'twin-limb': 'solid', 'quick_1974': 'dashdot'}
+LINESTYLE_MAP = {
+    'huk': 'dotted',
+    'sat-exp': 'solid',
+    'drift': 'dashed',
+    'twin-limb': 'solid',
+    'quick_1974': 'dashdot'
+}
 COLOR_MAP = {'2d': 'g', '3d': 'r'}
 MARKER_MAP = {'2d': 's', '3d': 's'}
 
