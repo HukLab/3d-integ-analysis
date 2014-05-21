@@ -33,8 +33,13 @@ LINESTYLE_MAP = {
 COLOR_MAP = {'2d': 'g', '3d': 'r'}
 MARKER_MAP = {'2d': 's', '3d': 's'}
 
-BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
-# BINS = [0.04, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.00]
+import numpy as np
+BINS = list(np.array([1, 2, 4, 8, 12, 24, 48, 96, 120])*(1/60.))
+# min_dur, max_dur = 0.04, 2.0
+# N = 25
+# BINS = np.logspace(np.log10(0.04), np.log10(2.0), N)
+# BINS = np.linspace(0.04, 2.0, N)
+# BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 
 all_subjs = ['huk', 'klb', 'krm', 'lnk', 'lkc']
 good_subjects = {

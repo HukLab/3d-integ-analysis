@@ -134,3 +134,19 @@ Say given X, cohA has pA and cohB has pB.
         P = p(pA - pB) + pB
             => p = (P-pB)/(pA-pB)
 
+---------------------------------------
+05/20/14
+---------------------------------------
+* show Kenny and Kate
+    trial-to-trial performance
+        * overall
+        * last 10 vs. before
+* fit drift diffusion
+    fit subject by subject and ALL
+        * preset delay
+        * let the delay wiggle
+        * let the K vary by coherence
+* duration bin playing
+    * show same fit (e.g. ALL data) for different bins
+        - current bins
+        - linearly-spaced bins
