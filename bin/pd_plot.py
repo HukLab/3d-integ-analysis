@@ -19,6 +19,8 @@ def save_or_show(show, outfile):
         plt.show()
 
 def plot(df0, show=True, outfile=None, fig=None, color='c'):
+    if len(df0) == 0:
+        return
     if fig is None:
         fig = plt.figure()
     if len(set(df0['dotmode'])) == 2:
