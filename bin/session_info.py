@@ -5,14 +5,14 @@ QUICK_FIT = True
 FIT_IS_COHLESS = {
     'huk': False,
     'sat-exp': False,
-    'drift': True,# False, -> enable drift_diffusion_2
+    'drift': False,#True,# False, -> enable drift_diffusion_2
     'twin-limb': False,
     'quick_1974': True,
 }
 DEFAULT_THETA = {
     'huk': {'A': 1.0, 'B': 0.5, 'T': 0.001},
     'sat-exp': {'A': 1.0, 'B': 0.5, 'T': 0.001},
-    'drift': {'K': 12.705, 'X0': 0.04}, # 12.705 9.816
+    'drift': {'K': 12.705, 'X0': 0.0389}, # 12.705 9.816
     'twin-limb': {'X0': 0.0, 'S0': 1.0, 'P': 0.0},
     'quick_1974': {'A': 0.0, 'B': 0.0},
 }
@@ -26,7 +26,7 @@ THETAS_TO_FIT = {
 LINESTYLE_MAP = {
     'huk': 'dotted',
     'sat-exp': 'solid',
-    'drift': 'dashed',
+    'drift': 'solid',#'dashed',
     'twin-limb': 'solid',
     'quick_1974': 'dashdot'
 }
@@ -34,11 +34,10 @@ COLOR_MAP = {'2d': 'g', '3d': 'r'}
 MARKER_MAP = {'2d': 's', '3d': 's'}
 
 import numpy as np
-BINS = list(np.array([1, 2, 4, 8, 12, 24, 48, 96, 120])*(1/60.))
-# min_dur, max_dur = 0.04, 2.0
-# N = 25
-# BINS = np.logspace(np.log10(0.04), np.log10(2.0), N)
-# BINS = np.linspace(0.04, 2.0, N)
+# BINS = list(np.array([2, 3, 5, 8, 12, 18, 26, 36, 48, 62, 76, 94, 114])*(1/60.))
+min_dur, max_dur, N = 0.039, 1.5, 10
+BINS = list(np.logspace(np.log10(min_dur), np.log10(max_dur), N))
+# BINS = list(np.linspace(min_dur, max_dur, N))
 # BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 
 all_subjs = ['huk', 'klb', 'krm', 'lnk', 'lkc']

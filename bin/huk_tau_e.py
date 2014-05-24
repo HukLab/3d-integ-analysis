@@ -41,7 +41,7 @@ def find_p_per_dur(rs, nboots, include_se):
 	Rs = bootstrap(rs, nboots)
 	bs = [np.mean(rs) for rs in Rs]
 	if include_se:
-		return np.mean(bs), bootstrap_se(bs)
+		return np.mean(bs), bootstrap_se(bs), len(rs)
 	else:
 		return np.mean(bs)
 

@@ -85,11 +85,16 @@ def pcor_curves(results, cohs, bins, cond, outfile):
             # yserr = pcor_curve_error(results[method], xs2, yf2)
             # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COLOR_MAP[cond])
         xs_binned, ys_binned = zip(*results['binned_pcor'][coh].iteritems())
-        ys_binned, yserr_binned = zip(*ys_binned)
+        if ys_binned and len(ys_binned[0]) == 2:
+            ys_binned, yserr_binned = zip(*ys_binned)
+        elif ys_binned and len(ys_binned[0]) == 3:
+            ys_binned, yserr_binned, ys_n = zip(*ys_binned)
+        else:
+            raise Exception("Internal")
         plt.plot(sec_to_ms(xs_binned), ys_binned, color=COLOR_MAP[cond], marker='.', linestyle='None')
         plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=COLOR_MAP[cond])
         plt.xscale('log')
-        # plt.xlim()
+        # plt.xlim(0, 1500)
         plt.ylim(0.2, 1.1)
     # plt.legend()
     try:
@@ -155,7 +160,8 @@ def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
             mkrs.append(MARKER_MAP[cond])
             lins.append(LINESTYLE_MAP[method])
             lbls.append(lbl)
-    param_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile, title, ylabel)
+    if xss:
+        param_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile, title, ylabel)
 
 def make_outfile(outdir, subj, cond, key, filetype='png'):
     return makefn(outdir, subj, cond, key, filetype)
@@ -184,17 +190,23 @@ def main(conds, subj, indir, outdir):
     subjs = list(set(chain(*subjs_by_cond.values())))
     for subj in subjs:
         subj_conds = [cond for cond in conds if subj in subjs_by_cond[cond]]
-        results_both = {}
+        results_both, res = {}, {}
         for cond in subj_conds:
-            res = load_pickle(INDIR, subj, cond)
+            try:
+                res = load_pickle(INDIR, subj, cond)
+            except IOError:
+                msg = "could not load {0} {1}".format(subj, cond)
+                logging.error(msg)
+                continue
             outfile = make_outfile(OUTDIR, subj, cond, 'fit')
             pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfile)
             results_both[cond] = res['fits']
-        param_curve_both_conds(results_both, res['cohs'], ['drift'], make_outfile(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh')
-        # param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], make_outfile(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0')
-        # methods = ['sat-exp', 'huk']
-        # param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
-        # param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
+        if res:
+            param_curve_both_conds(results_both, res['cohs'], ['drift'], make_outfile(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh')
+            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], make_outfile(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0')
+            methods = ['sat-exp', 'huk']
+            param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
+            param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
