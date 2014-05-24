@@ -5,7 +5,7 @@ QUICK_FIT = True
 FIT_IS_COHLESS = {
     'huk': False,
     'sat-exp': False,
-    'drift': False,#True,# False, -> enable drift_diffusion_2
+    'drift': True,# False, -> enable drift_diffusion_2
     'twin-limb': False,
     'quick_1974': True,
 }

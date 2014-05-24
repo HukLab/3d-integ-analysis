@@ -1,10 +1,11 @@
 import os.path
 import argparse
-from operator import and_ # bitwise-and, e.g. a & b
+from operator import and_, or_ # bitwise-and, e.g. a & b; bitwise-or, e.g. a | b
 
 import pandas as pd
 
 from pd_plot import plot
+from session_info import good_subjects, bad_sessions, good_cohs
 
 COLS = [u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct', u'subj', u'dotmode', u'number']
 COL_TYPES = [int, int, float, float, int, float, int, bool, str, str, int]
@@ -24,26 +25,59 @@ def load(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
 
 make_equal_filter = lambda key, val: (key, lambda x: x == val)
 make_gt_filter = lambda key, val: (key, lambda x: x > val)
+# make_set_filter = lambda key, vals: (key, lambda x: x in vals)
+# make_not_set_filter = lambda key, vals: (key, lambda x: x not in vals)
 
 def interpret_filters(args):
     filters = []
-    filters.append(make_gt_filter('coherence', 0.0))
+    # filters.append(make_gt_filter('coherence', 0.0))
     for key, val in args.iteritems():
         assert key in COLS
         if val is not None:
             filters.append(make_equal_filter(key, val))
     return filters
 
-def filter(df, filters):
+def filter_df(df, filters):
+    if not filters:
+        return df
     preds = []
     for key, pred in filters:
         preds.append(pred(df[key]))
     return df[reduce(and_, preds)]
 
+def default_filter_df(df):
+    """
+    good_subjects, bad_sessions, good_cohs
+    """
+    # good_subjects
+    ffs = []
+    for dotmode, subjs in good_subjects.iteritems():
+        pred = (df['dotmode'] == dotmode) & (df['subj'].isin(subjs))
+        ffs.append(pred)
+    if ffs:
+        df = df[reduce(or_, ffs)]
+    # bad_sessions
+    ffs = []
+    for dotmode, lkp in bad_sessions.iteritems():
+        for subj, inds in lkp.iteritems():
+            pred = (df['subj'] == subj) & (df['dotmode'] == dotmode) & ~(df['session_index'].isin(inds))
+            ffs.append(pred)
+    if ffs:
+        df = df[reduce(or_, ffs)]
+    # good_cohs
+    ffs = []
+    for dotmode, inds in good_cohs.iteritems():
+        pred = (df['dotmode'] == dotmode) & (df['coherence'].isin(inds))
+        ffs.append(pred)
+    if ffs:
+        df = df[reduce(or_, ffs)]
+    return df
+
 def main(args):
     df = load()
     print df.shape
-    df = filter(df, interpret_filters(args))
+    df = filter_df(df, interpret_filters(args))
+    df = default_filter_df(df)
     print df.head()
     print df.shape
     plot(df)

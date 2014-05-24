@@ -41,6 +41,7 @@ def plot(df0, show=True, outfile=None, fig=None, color='c'):
         ax.set_ylabel('duration bin')
         ax.set_zlabel('p correct')
         ax.set_zlim([0.0, 1.0])
+        ax.set_zlim([0.4, 1.0])
     elif len(df.keys()) == 2:
         ax = fig.gca(projection='2d')
         ax.scatter(*data, color=color)
