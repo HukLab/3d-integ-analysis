@@ -25,12 +25,9 @@ def load(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
 
 make_equal_filter = lambda key, val: (key, lambda x: x == val)
 make_gt_filter = lambda key, val: (key, lambda x: x > val)
-# make_set_filter = lambda key, vals: (key, lambda x: x in vals)
-# make_not_set_filter = lambda key, vals: (key, lambda x: x not in vals)
 
 def interpret_filters(args):
     filters = []
-    # filters.append(make_gt_filter('coherence', 0.0))
     for key, val in args.iteritems():
         assert key in COLS
         if val is not None:
