@@ -199,19 +199,19 @@ def main(conds, subj, fits_to_fit, outdir):
         logging.error(msg)
         raise Exception(msg)
 
-ALL_FITS = FIT_IS_COHLESS.keys()
-parser = argparse.ArgumentParser()
-parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
-parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="2D or 3D or both.")
-parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="SUBJECT fits for each subject, ALL combines data and fits all at once. Or specify subject like HUK")
-parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
-args = parser.parse_args()
-
-def fits_fit(fits, all_fits):
-    return dict((fit, fit in fits) for fit in all_fits)
-
 if __name__ == '__main__':
-    main(args.conds, args.subj, fits_fit(args.fits, ALL_FITS), args.outdir)
     """
     NOTE: See http://courses.washington.edu/matlab1/Lesson_5.html
     """
+    ALL_FITS = FIT_IS_COHLESS.keys()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
+    parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="2D or 3D or both.")
+    parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="SUBJECT fits for each subject, ALL combines data and fits all at once. Or specify subject like HUK")
+    parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
+    args = parser.parse_args()
+
+    def fits_fit(fits, all_fits):
+        return dict((fit, fit in fits) for fit in all_fits)
+    
+    main(args.conds, args.subj, fits_fit(args.fits, ALL_FITS), args.outdir)

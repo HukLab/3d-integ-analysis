@@ -56,11 +56,10 @@ def main(subj, indir, outdir):
     TRIALS = load_json(INFILE)
     mix(TRIALS, INDIR, OUTDIR, subj)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
-parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
-parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="Specify subject like HUK")
-args = parser.parse_args()
-
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
+    parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
+    parser.add_argument('-s', "--subj", default='SUBJECT', choices=['SUBJECT', 'ALL'] + all_subjs, type=str, help="Specify subject like HUK")
+    args = parser.parse_args()
     main(args.subj, args.indir, args.outdir)

@@ -208,12 +208,12 @@ def main(conds, subj, indir, outdir):
             param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
             param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
-parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
-parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
-parser.add_argument('-s', "--subj", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'] + all_subjs, help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
-args = parser.parse_args()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', "--indir", required=True, type=str, help="The directory from which fits will be loaded.")
+    parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
+    parser.add_argument('-c', "--conds", default=['2d', '3d'], nargs='*', choices=['2d', '3d'], type=str, help="The number of imperatives to generate.")
+    parser.add_argument('-s', "--subj", default='SUBJECT', type=str, choices=['SUBJECT', 'ALL'] + all_subjs, help="SUBJECT fits for each subject, ALL combines data and fits all at once.")
+    args = parser.parse_args()
     main(args.conds, args.subj, args.indir, args.outdir)
