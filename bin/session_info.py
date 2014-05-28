@@ -57,7 +57,7 @@ bad_sessions = {
     },
     '3d': {
         'huk': [],
-        'klb': [], #range(42, 147), #range(106, 117),
+        'klb': range(96, 117), #range(42, 147), #range(106, 117),
         'krm': [],
         'lnk': [], #[5],
         'lkc': [],
