@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
 from mpl_toolkits.mplot3d import Axes3D
 
-def plot_surface(xs, ys, zs, resX=50, resY=50):
+def plot_surface(xs, ys, zs, resX=50, resY=100):
     xi = np.linspace(min(xs), max(xs), resX)
     yi = np.linspace(min(ys), max(ys), resY)
     Z = griddata(xs, ys, zs, xi, yi, interp='linear')
@@ -23,8 +23,8 @@ def plot_inner(data, fig, color):
         ax.set_xlabel('log(coherence)')
         ax.set_ylabel('duration bin')
         ax.set_zlabel('p correct')
-        # ax.set_zlim([0.0, 1.0])
-        # ax.set_zlim([0.4, 1.0])
+        ax.set_xlim([0.5, 5.0])
+        ax.set_zlim([0.3, 1.0])
     else:
         raise Exception("too many dimensions in d: {0}".format(len(data)))
 
@@ -36,17 +36,13 @@ def save_or_show(show, outfile):
     else:
         plt.show()
 
-def plot(df0, show=True, outfile=None, fig=None, color='c'):
-    if len(df0) == 0:
+def plot(df, show=True, outfile=None, fig=None):
+    if len(df) == 0:
         return
     if fig is None:
         fig = plt.figure()
-    if len(df0['dotmode'].unique()) == 2:
-        plot(df0[df0['dotmode']=='2d'], False, None, fig, 'g')
-        plot(df0[df0['dotmode']=='3d'], False, None, fig, 'r')
-        save_or_show(show, outfile)
-        return
-    df2 = df0[['coherence', 'duration_index', 'correct']]
-    df = df2.groupby(['coherence', 'duration_index'], as_index=False).aggregate(np.mean)
-    plot_inner(zip(*df.values), fig, color)
+    for dotmode, df_dotmode in df.groupby('dotmode'):
+        df2 = df_dotmode[['coherence', 'duration_index', 'correct']]
+        df3 = df2.groupby(['coherence', 'duration_index'], as_index=False).aggregate(np.mean)
+        plot_inner(zip(*df3.values), fig, 'g' if dotmode == '2d' else 'r')
     save_or_show(show, outfile)

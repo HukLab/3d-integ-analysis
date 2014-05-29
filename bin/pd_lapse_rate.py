@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pd_io import load, default_filter_df
+from pd_io import load
 
 MIN_COH = 1.0
 
@@ -13,10 +13,11 @@ def all(min_coh=MIN_COH):
     return df3
 
 def main(subj, dotmode, min_coh=MIN_COH):
-    df = default_filter_df(load())
+    df = load()
     df2 = df[(df.subj == subj) & (df.dotmode == dotmode) & (df.coherence >= MIN_COH)]
     df3 = df2.groupby(['coherence', 'number'], as_index=False)['correct'].agg(np.mean)
 
+    df3['correct']=df3['correct'].map(lambda x: 1 - x)
     df3.groupby('coherence').plot('number','correct', linestyle='-', marker='o')
     plt.title('Lapse rate for {0} {1}'.format(subj, dotmode))
     plt.xlabel('session #')

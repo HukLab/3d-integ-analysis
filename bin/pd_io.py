@@ -15,7 +15,7 @@ BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
 SESSIONS_INFILE = os.path.join(BASEDIR, 'csv', 'sessions.csv')
 TRIALS_INFILE = os.path.join(BASEDIR, 'csv', 'trials.csv')
 
-def load(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
+def load_df(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
     df1 = pd.read_csv(sessions_infile, index_col='index')
     assert all(df1.keys() == [u'subj', u'dotmode', u'number'])
     df2 = pd.read_csv(trials_infile, index_col='index')
@@ -27,6 +27,8 @@ make_gt_filter = lambda key, val: (key, lambda x: x > val)
 
 def interpret_filters(args):
     filters = []
+    if args is None:
+        return filters
     for key, val in args.iteritems():
         assert key in COLS
         if val is not None:
@@ -69,11 +71,13 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def main(args):
-    df = load()
-    print df.shape
+def load(args=None):
+    df = load_df()
     df = filter_df(df, interpret_filters(args))
-    df = default_filter_df(df)
+    return default_filter_df(df)
+
+def main(args):
+    df = load(args)
     print df.head()
     print df.shape
     plot(df)
