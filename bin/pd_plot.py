@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
 from mpl_toolkits.mplot3d import Axes3D
 
-def plot_surface(xs, ys, zs, resX=50, resY=100):
+def make_surface(xs, ys, zs, resX=100, resY=100):
     xi = np.linspace(min(xs), max(xs), resX)
     yi = np.linspace(min(ys), max(ys), resY)
     Z = griddata(xs, ys, zs, xi, yi, interp='linear')
@@ -19,7 +19,7 @@ def plot_inner(data, fig, color):
         x,y,z = data
         x = np.log(100.*np.array(x))
         ax.scatter(x,y,z, color=color)
-        ax.plot_wireframe(*plot_surface(x,y,z), color=color)
+        ax.plot_wireframe(*make_surface(x,y,z), color=color)
         ax.set_xlabel('log(coherence)')
         ax.set_ylabel('duration bin')
         ax.set_zlabel('p correct')
