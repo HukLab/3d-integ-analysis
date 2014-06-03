@@ -10,9 +10,9 @@ CONSTRAINTS = []
 
 def twin_limb(x, X0, S0, P):
     """
-    p is the slope at which the value increases
-    x0 is the time at which the value plateaus
     S0 is the value after the value plateaus, 0 <= S0 <= 1
+    X0 is the time at which the value plateaus
+    P is the slope at which the value increases
 
     twin-limb function [Burr, Santoto (2001)]
         S(x) =
