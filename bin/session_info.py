@@ -1,7 +1,7 @@
 NBOOTS = 0
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
 
-QUICK_FIT = True
+QUICK_FIT = False
 FIT_IS_COHLESS = {
     'huk': False,
     'sat-exp': False,
@@ -45,7 +45,7 @@ good_subjects = {
     # '2d': ['huk', 'lnk'],
     # '3d': ['huk', 'lnk', 'lkc'],
     '2d': ['huk', 'klb', 'krm', 'lnk'],
-    '3d': ['huk', 'klb', 'krm', 'lnk', 'lkc'],
+    '3d': ['huk', 'klb', 'krm', 'lnk'],#, 'lkc'],
 }
 
 bad_sessions = {
@@ -67,13 +67,13 @@ bad_sessions = {
 good_cohs = {
     '2d': [0.03, 0.06, 0.12, 0.25, 0.5, 1],
     '3d': [0.03, 0.06, 0.12, 0.25, 0.5, 1],
-    # '2d': [0, 0.01, 0.03, 0.06, 0.12, 0.25, 0.5, 1],
-    # '3d': [0, 0.01, 0.03, 0.06, 0.12, 0.25, 0.5, 1],
+    # '2d': [0, 0.03, 0.06, 0.12, 0.25, 0.5, 1],
+    # '3d': [0, 0.03, 0.06, 0.12, 0.25, 0.5, 1],
 }
 bad_cohs = {
     '2d': [0, 0.01],
     '3d': [0, 0.01, 0.1, 0.15, 0.22, 0.3, 0.4, 0.6],
-    # '2d': [],
-    # '3d': [0.1, 0.15, 0.22, 0.3, 0.4, 0.6],
+    # '2d': [0.01],
+    # '3d': [0.01, 0.1, 0.15, 0.22, 0.3, 0.4, 0.6],
 }
 assert not any([good_cohs[cond] == bad_cohs[cond] for cond in good_cohs])

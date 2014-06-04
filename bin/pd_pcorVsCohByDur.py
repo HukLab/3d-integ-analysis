@@ -10,6 +10,13 @@ from scipy.optimize import minimize
 from tools import color_list
 from pd_io import load, default_filter_df
 
+def make_durmap(df):
+    return dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
+
+def make_colmap(durinds):
+    cols = color_list(len(durinds))
+    return dict((di, col) for di, col in zip(durinds, cols))
+
 def params(theta):
     if len(theta) == 2:
         a, b = theta
@@ -45,7 +52,7 @@ def weibull_mle(theta, xs, ys):
         logL = np.sum(ys*np.log(yh) + (1-ys)*np.log(1-yh))
     return -logL
 
-def solve(xs, ys, guess=(0.3, 1.0), ntries=10):
+def solve(xs, ys, guess=(0.3, 1.0), ntries=20):
     neg_log_likelihood_fcn = lambda theta: weibull_mle(theta, xs, ys)
     for i in xrange(ntries):
         if i > 0:
@@ -56,9 +63,12 @@ def solve(xs, ys, guess=(0.3, 1.0), ntries=10):
             return theta_hat
     return None
 
-def solve_all_durations(df, thresh_val):
+def solve_all_durations(df, dotmode, thresh_val, ax, show_for_each_dotmode):
+    durinds = sorted(df['duration_index'].unique())
+    colmap = make_colmap(durinds)
+    durmap = make_durmap(df)
     threshes, thetas = {}, {}
-    for di in df['duration_index'].unique():
+    for di in durinds:
         dfc = df[df['duration_index'] == di]
         xs = dfc['coherence'].values
         ys = dfc['correct'].values.astype('float')
@@ -68,6 +78,17 @@ def solve_all_durations(df, thresh_val):
             print 'ERROR   (di={0})'.format(di)
         else:
             print 'SUCCESS (di={0}): {1}, {2}'.format(di, thetas[di], np.log(threshes[di]))
+        if thetas[di] is not None and ax is not None:
+            xsp, ysp = zip(*dfc.groupby('coherence', as_index=False)['correct'].agg(np.mean).values)
+            if show_for_each_dotmode:
+                color = colmap[di]
+                label = "%0.2f" % durmap[di]
+            else:
+                color = 'g' if dotmode == '2d' else 'r'
+                label = dotmode
+            ax.scatter(xsp, ysp, color=color, label=label, marker='o')
+            xsc = np.linspace(min(xsp), max(xsp))
+            ax.plot(xsc, weibull(xsc, thetas[di]), color=color, linestyle='-')
     return threshes, thetas
 
 def set_xticks(pts, ax):
@@ -150,22 +171,47 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
     plt.legend()
     plt.show()
 
-def thresholds(args, thresh_val):
+
+def plot_info(ax, label):
+    plt.title('{0}: % correct vs. coherence, by duration'.format(label))
+    plt.xlabel('coherence')
+    plt.ylabel('% correct')
+    # plt.xlim([0.0, 1.05])
+    plt.ylim([0.4, 1.05])
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.show()
+
+def thresholds(args, plot_thresh, thresh_val):
     df = default_filter_df(load(args))
-    durmap = dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
+    if len(df['duration_index'].unique()) == 1:
+        show_for_each_dotmode = False
+        fig = plt.figure()
+        ax = plt.subplot(111)
+    else:
+        show_for_each_dotmode = True
+    durmap = make_durmap(df)
     pts = {}
     for dotmode, df_dotmode in df.groupby('dotmode'):
         print dotmode
-        threshes, thetas = solve_all_durations(df_dotmode, thresh_val)
+        if show_for_each_dotmode:
+            fig = plt.figure()
+            ax = plt.subplot(111)
+        threshes, thetas = solve_all_durations(df_dotmode, dotmode, thresh_val, ax, show_for_each_dotmode)
         xs, ys = zip(*[(durmap[di], threshes[di]) for di in sorted(threshes) if threshes[di] is not None])
         pts[dotmode] = (xs, ys)
-    plot_and_fit_thresholds(pts, thresh_val)
+        if show_for_each_dotmode:
+            plot_info(ax, dotmode)
+    if not show_for_each_dotmode:
+        plot_info(ax, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]])
+    if plot_thresh:
+        plot_and_fit_thresholds(pts, thresh_val)
 
 def plot(df, dotmode):
-    durinds = df['duration_index'].unique()
-    durmap = dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
-    cols = color_list(len(durinds))
-    colmap = dict((di, col) for di, col in zip(durinds, cols))
+    durinds = sorted(df['duration_index'].unique())
+    colmap = make_colmap(durinds)
+    durmap = make_durmap(df)
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -192,11 +238,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--subj", required=False, type=str, help="")
     parser.add_argument("--dotmode", required=False, type=str, help="")
+    parser.add_argument('--durind', required=False, type=int)
     parser.add_argument('--thresh', action='store_true', default=False)
+    parser.add_argument('--plot-thresh', action='store_true', default=False)
     parser.add_argument('--thresh-val', type=float, default=0.75)
     args = parser.parse_args()
-    ps = {'subj': args.subj, 'dotmode': args.dotmode}
+    ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:
-        thresholds(ps, args.thresh_val)
+        thresholds(ps, args.plot_thresh, args.thresh_val)
     else:
         main(ps)
