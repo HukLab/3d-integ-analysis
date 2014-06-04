@@ -1,4 +1,4 @@
-from mle import mle, log_likelihood, APPROX_ZERO
+from mle import fit_mle, log_likelihood, APPROX_ZERO
 
 THETA_ORDER = ['X0', 'S0', 'P']
 BOUNDS = {'X0': (0.0+APPROX_ZERO, None), 'S0': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'P': (None, None)}

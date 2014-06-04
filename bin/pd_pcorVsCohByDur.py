@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import linregress
 from scipy.optimize import minimize
 
+from sample import bootstrap
 from tools import color_list
 from pd_io import load, default_filter_df
 
@@ -63,43 +64,68 @@ def solve(xs, ys, guess=(0.3, 1.0), ntries=20):
             return theta_hat
     return None
 
-def solve_all_durations(df, dotmode, thresh_val, ax, show_for_each_dotmode):
+def plot_weibull_with_data(dfc, dotmode, di, theta, colmap, durmap, ax, show_for_each_dotmode, is_boot):
+    xsp, ysp = zip(*dfc.groupby('coherence', as_index=False)['correct'].agg(np.mean).values)
+    if show_for_each_dotmode:
+        color = colmap[di]
+        label = "%0.2f" % durmap[di]
+    else:
+        color = 'g' if dotmode == '2d' else 'r'
+        label = dotmode
+    if is_boot:
+        label = ''
+    ax.scatter(xsp, ysp, color=color, label=label, marker='o')
+    xsc = np.linspace(min(xsp), max(xsp))
+    ax.plot(xsc, weibull(xsc, theta), color=color, linestyle='-')
+
+def solve_one_duration(xs, ys, di, thresh_val):
+    theta = solve(xs, ys)
+    thresh = inv_weibull(theta, thresh_val) if theta is not None else None
+    if theta is None:
+        print 'ERROR   (di={0})'.format(di)
+    else:
+        print 'SUCCESS (di={0}): {1}, {2}'.format(di, theta, np.log(thresh))
+    return theta, thresh
+
+def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmode):
     durinds = sorted(df['duration_index'].unique())
     colmap = make_colmap(durinds)
     durmap = make_durmap(df)
-    threshes, thetas = {}, {}
-    for di in durinds:
-        dfc = df[df['duration_index'] == di]
-        xs = dfc['coherence'].values
-        ys = dfc['correct'].values.astype('float')
-        thetas[di] = solve(xs, ys)
-        threshes[di] = inv_weibull(thetas[di], thresh_val) if thetas[di] is not None else None
-        if thetas[di] is None:
-            print 'ERROR   (di={0})'.format(di)
-        else:
-            print 'SUCCESS (di={0}): {1}, {2}'.format(di, thetas[di], np.log(threshes[di]))
-        if thetas[di] is not None and ax is not None:
-            xsp, ysp = zip(*dfc.groupby('coherence', as_index=False)['correct'].agg(np.mean).values)
-            if show_for_each_dotmode:
-                color = colmap[di]
-                label = "%0.2f" % durmap[di]
+    threshes, thetas = dict(zip(durinds, [list() for _ in xrange(len(durinds))])), dict(zip(durinds, [list() for _ in xrange(len(durinds))]))
+    for di, df_durind in df.groupby('duration_index'):
+        zss = [bootstrap(y.values, nboots) for x,y in df_durind[['coherence','correct']].sort('coherence').groupby('coherence')]
+        zss = [np.vstack([z[i] for z in zss]) for i in xrange(nboots)]
+        for i in xrange(nboots+1):
+            if i == 0:
+                xs, ys = zip(*df_durind[['coherence','correct']].values)
+                xs = np.array(xs)
+                ys = np.array(ys).astype('float')
             else:
-                color = 'g' if dotmode == '2d' else 'r'
-                label = dotmode
-            ax.scatter(xsp, ysp, color=color, label=label, marker='o')
-            xsc = np.linspace(min(xsp), max(xsp))
-            ax.plot(xsc, weibull(xsc, thetas[di]), color=color, linestyle='-')
+                xs = zss[i-1][:, 0].astype('float')
+                ys = zss[i-1][:, 1].astype('float')
+            theta, thresh = solve_one_duration(xs, ys, di, thresh_val)
+            if theta is not None and ax is not None:
+                plot_weibull_with_data(df_durind, dotmode, di, theta, colmap, durmap, ax, show_for_each_dotmode, i>0)
+            thetas[di].append(theta)
+            threshes[di].append(thresh)
     return threshes, thetas
+
+is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
+def remove_nan_or_inf(items):
+    items = np.array(items)
+    return items[~is_nan_or_inf(items)]
 
 def set_xticks(pts, ax):
     vals = np.array(list(itertools.chain(*[x for x,y in pts.values()])))
     xticks = np.log(1000*vals)
+    xticks = remove_nan_or_inf(xticks)
     ax.xaxis.set_ticks(xticks)
     ax.xaxis.set_ticklabels([int(np.exp(x)) for x in xticks])
 
 def set_yticks(pts, ax):
     vals = np.array(list(itertools.chain(*[y for x,y in pts.values()])))
     ys = np.log(vals)
+    ys = remove_nan_or_inf(ys)
     yticks = np.linspace(min(ys), max(ys), 10)
     ax.yaxis.set_ticks(yticks)
     ax.yaxis.set_ticklabels([int(100*np.exp(y)) for y in yticks])
@@ -107,6 +133,8 @@ def set_yticks(pts, ax):
 def find_elbow(xs, ys, presets=None, ntries=10):
     xs = np.log(1000*np.array(xs))
     ys = np.log(ys)
+    zs = np.array([xs, ys])
+    xs, ys = zs[:, ~is_nan_or_inf(zs[0]) & ~is_nan_or_inf(zs[1])]
     def error_fcn((x0, A0, B0, A1, B1)):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1])
         yh = z[0]*z[1] + (1-z[0])*z[2]
@@ -124,6 +152,7 @@ def find_elbow(xs, ys, presets=None, ntries=10):
         if soln['success']:
             theta_hat = soln['x']
             return theta_hat
+    1/0
     return None
 
 def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=True):
@@ -138,8 +167,10 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
         xs2, ys2 = [], []
         if theta_hat is not None:
             x_split = np.exp(theta_hat[0])
-        else:
+        elif not solve_elbow:
             x_split = x_split_default
+        else:
+            x_split = None
         if x_split is not None:
             print 'Splitting xs at {0} ms'.format(x_split)
             assert all(operator.le(xs[i], xs[i+1]) for i in xrange(len(xs)-1)) # xs is sorted
@@ -150,6 +181,9 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
             except StopIteration: # all of xs is less than x_split
                 pass
             plt.axvline(np.log(x_split), color=color, linestyle='--')
+        else:
+            xs2 = []
+            ys2 = []
         for i, (x, y) in enumerate([(xs, ys), (xs2, ys2)]):
             if len(x) == 0:
                 continue
@@ -159,10 +193,11 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
             else:
                 slope, intercept, r_value, p_value, std_err = linregress(np.log(x), np.log(y))
                 print '{3}, {4}: slope={0}, intercept={1}, r^2={2}'.format(slope, intercept, r_value**2, dotmode, i+1)
-            x0 = [min(x), x_split] if i == 0 else [x_split, max(x)]
-            plt.plot(np.log(x0), slope*np.log(x0) + intercept, color=color)
-            plt.scatter(np.log(x), np.log(y), label=dotmode, color=color)
-            plt.text(np.mean(np.log(x0)), np.mean(np.log(y)), 'slope={0:.2f}'.format(slope), color=color)
+            if x_split is not None:
+                x0 = [min(x), x_split] if i == 0 else [x_split, max(x)]
+                plt.plot(np.log(x0), slope*np.log(x0) + intercept, color=color)
+                plt.scatter(np.log(x), np.log(y), label=dotmode, color=color)
+                plt.text(np.mean(np.log(x0)), np.mean(np.log(y)), 'slope={0:.2f}'.format(slope), color=color)
     plt.title('{0}% coh thresh vs. duration'.format(int(thresh_val * 100)))
     set_xticks(pts, ax)
     set_yticks(pts, ax)
@@ -170,7 +205,6 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
     plt.ylabel('{0}% coh thresh'.format(int(thresh_val * 100)))
     plt.legend()
     plt.show()
-
 
 def plot_info(ax, label):
     plt.title('{0}: % correct vs. coherence, by duration'.format(label))
@@ -183,7 +217,7 @@ def plot_info(ax, label):
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.show()
 
-def thresholds(args, plot_thresh, thresh_val):
+def thresholds(args, nboots, plot_thresh, thresh_val):
     df = default_filter_df(load(args))
     if len(df['duration_index'].unique()) == 1:
         show_for_each_dotmode = False
@@ -198,8 +232,9 @@ def thresholds(args, plot_thresh, thresh_val):
         if show_for_each_dotmode:
             fig = plt.figure()
             ax = plt.subplot(111)
-        threshes, thetas = solve_all_durations(df_dotmode, dotmode, thresh_val, ax, show_for_each_dotmode)
-        xs, ys = zip(*[(durmap[di], threshes[di]) for di in sorted(threshes) if threshes[di] is not None])
+        threshes, thetas = solve_all_durations(df_dotmode, dotmode, nboots, thresh_val, ax, show_for_each_dotmode)
+        xs, ys = zip(*[(durmap[di], thresh) for di in sorted(threshes) for thresh in threshes[di]])
+        # xs, ys = zip(*[(durmap[di], threshes[di]) for di in sorted(threshes) if threshes[di] is not None])
         pts[dotmode] = (xs, ys)
         if show_for_each_dotmode:
             plot_info(ax, dotmode)
@@ -240,11 +275,12 @@ if __name__ == '__main__':
     parser.add_argument("--dotmode", required=False, type=str, help="")
     parser.add_argument('--durind', required=False, type=int)
     parser.add_argument('--thresh', action='store_true', default=False)
+    parser.add_argument('--nboots', required=False, type=int, default=0)
     parser.add_argument('--plot-thresh', action='store_true', default=False)
     parser.add_argument('--thresh-val', type=float, default=0.75)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:
-        thresholds(ps, args.plot_thresh, args.thresh_val)
+        thresholds(ps, args.nboots, args.plot_thresh, args.thresh_val)
     else:
         main(ps)
