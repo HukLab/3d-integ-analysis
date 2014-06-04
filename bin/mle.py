@@ -115,6 +115,7 @@ def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=
         constraints = []
 
     thetas = []
+    poor_thetas = []
     ymin = float('inf')
     for guess in guesses:
         theta = minimize(log_likelihood_fcn, guess, method=method, bounds=bounds, constraints=constraints)
@@ -126,6 +127,11 @@ def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=
                 return thetas
             msg = '{0}, {1}'.format(theta['x'], theta['fun'])
             logging.info(msg)
+        elif theta['success']:
+            poor_thetas.append(theta)
+    if len(thetas) == 0:
+        logging.warning('Using theta against bounds.')
+        return poor_thetas
     return thetas
 
 def log_likelihood_factory(data, fcn, thetas, theta_key_order):
