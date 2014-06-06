@@ -2,6 +2,7 @@ import os.path
 import argparse
 from operator import and_, or_ # bitwise-and, e.g. a & b; bitwise-or, e.g. a | b
 
+import numpy as np
 import pandas as pd
 
 from pd_plot import plot
@@ -43,10 +44,27 @@ def filter_df(df, filters):
         preds.append(pred(df[key]))
     return df[reduce(and_, preds)]
 
+def shift_bins(df, durbin_3d=2, durbin_floor=1):
+    df.ix[df['dotmode'] == '3d', 'duration_index'] = df[df['dotmode'] == '3d']['duration_index'] - durbin_3d
+    df = df[df['duration_index'] >= durbin_floor]
+    return df
+
+def rebin(df, N=10):
+    min_dur, max_dur = 0.04, 1.2 #df['duration'].min(), df['duration'].max()
+    bins = list(np.logspace(np.log10(min_dur), np.log10(max_dur), N))
+    bins = bins[1:]
+    bins[-1] = max_dur + 0.01
+    bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [max_dur+1]) if dur < lbin)
+    df = df.loc[df['duration'] <= max_dur, :].copy()
+    df.loc[:, 'duration_index'] = df['duration'].map(bin_lkp)
+    # return shift_bins(df, 5, 3)
+    return df
+
 def default_filter_df(df):
     """
     good_subjects, bad_sessions, good_cohs
     """
+    df = rebin(df, 20)
     # good_subjects
     ffs = []
     for dotmode, subjs in good_subjects.iteritems():

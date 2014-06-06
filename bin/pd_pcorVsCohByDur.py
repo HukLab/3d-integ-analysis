@@ -64,11 +64,10 @@ def solve(xs, ys, guess=(0.3, 1.0), ntries=20):
             return theta_hat
     return None
 
-def plot_weibull_with_data(dfc, dotmode, di, theta, colmap, durmap, ax, show_for_each_dotmode, is_boot):
+def plot_weibull_with_data(dfc, dotmode, theta, thresh, color, dur, ax, show_for_each_dotmode, is_boot):
     xsp, ysp = zip(*dfc.groupby('coherence', as_index=False)['correct'].agg(np.mean).values)
     if show_for_each_dotmode:
-        color = colmap[di]
-        label = "%0.2f" % durmap[di]
+        label = "%0.2f" % dur
     else:
         color = 'g' if dotmode == '2d' else 'r'
         label = dotmode
@@ -76,6 +75,7 @@ def plot_weibull_with_data(dfc, dotmode, di, theta, colmap, durmap, ax, show_for
         label = ''
     ax.scatter(xsp, ysp, color=color, label=label, marker='o')
     xsc = np.linspace(min(xsp), max(xsp))
+    plt.axvline(thresh, color=color, linestyle='--')
     ax.plot(xsc, weibull(xsc, theta), color=color, linestyle='-')
 
 def solve_one_duration(xs, ys, di, thresh_val):
@@ -105,9 +105,29 @@ def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmo
                 ys = zss[i-1][:, 1].astype('float')
             theta, thresh = solve_one_duration(xs, ys, di, thresh_val)
             if theta is not None and ax is not None:
-                plot_weibull_with_data(df_durind, dotmode, di, theta, colmap, durmap, ax, show_for_each_dotmode, i>0)
+                plot_weibull_with_data(df_durind, dotmode, theta, thresh, colmap[di], durmap[di], ax, show_for_each_dotmode, i>0)
             thetas[di].append(theta)
             threshes[di].append(thresh)
+    return threshes, thetas
+
+def solve_ignoring_durations(df, dotmode, nboots, thresh_val, ax):
+    di = -1
+    threshes, thetas = [], []
+    zss = [bootstrap(y.values, nboots) for x,y in df[['coherence','correct']].sort('coherence').groupby('coherence')]
+    zss = [np.vstack([z[i] for z in zss]) for i in xrange(nboots)]
+    for i in xrange(nboots+1):
+        if i == 0:
+            xs, ys = zip(*df[['coherence','correct']].values)
+            xs = np.array(xs)
+            ys = np.array(ys).astype('float')
+        else:
+            xs = zss[i-1][:, 0].astype('float')
+            ys = zss[i-1][:, 1].astype('float')
+        theta, thresh = solve_one_duration(xs, ys, di, thresh_val)
+        if theta is not None and ax is not None:
+            plot_weibull_with_data(df, dotmode, theta, thresh, 'g' if dotmode == '2d' else 'r', dotmode, ax, False, i>0)
+        thetas.append(theta)
+        threshes.append(thresh)
     return threshes, thetas
 
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
@@ -118,7 +138,7 @@ def remove_nan_or_inf(items):
 def set_xticks(pts, ax):
     vals = np.array(list(itertools.chain(*[x for x,y in pts.values()])))
     xticks = np.log(1000*vals)
-    xticks = remove_nan_or_inf(xticks)
+    xticks = list(set(remove_nan_or_inf(xticks)))
     ax.xaxis.set_ticks(xticks)
     ax.xaxis.set_ticklabels([int(np.exp(x)) for x in xticks])
 
@@ -152,7 +172,6 @@ def find_elbow(xs, ys, presets=None, ntries=10):
         if soln['success']:
             theta_hat = soln['x']
             return theta_hat
-    1/0
     return None
 
 def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=True):
@@ -207,39 +226,46 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
     plt.show()
 
 def plot_info(ax, label):
-    plt.title('{0}: % correct vs. coherence, by duration'.format(label))
+    plt.title('{0}: % correct vs. coherence'.format(label))
     plt.xlabel('coherence')
     plt.ylabel('% correct')
     # plt.xlim([0.0, 1.05])
+    plt.xscale('log')
     plt.ylim([0.4, 1.05])
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.show()
 
-def thresholds(args, nboots, plot_thresh, thresh_val):
+def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val):
     df = default_filter_df(load(args))
-    if len(df['duration_index'].unique()) == 1:
+    ndurinds = len(df['duration_index'].unique())
+    subjs = df['subj'].unique()
+    if ndurinds == 1:
         show_for_each_dotmode = False
+    if not show_for_each_dotmode:
         fig = plt.figure()
         ax = plt.subplot(111)
-    else:
-        show_for_each_dotmode = True
     durmap = make_durmap(df)
+    durmap[-1] = 'all'
     pts = {}
     for dotmode, df_dotmode in df.groupby('dotmode'):
         print dotmode
         if show_for_each_dotmode:
             fig = plt.figure()
             ax = plt.subplot(111)
+        elif ndurinds > 1:
+            _, _ = solve_ignoring_durations(df_dotmode, dotmode, nboots, thresh_val, ax)
+            continue
         threshes, thetas = solve_all_durations(df_dotmode, dotmode, nboots, thresh_val, ax, show_for_each_dotmode)
         xs, ys = zip(*[(durmap[di], thresh) for di in sorted(threshes) for thresh in threshes[di]])
-        # xs, ys = zip(*[(durmap[di], threshes[di]) for di in sorted(threshes) if threshes[di] is not None])
         pts[dotmode] = (xs, ys)
         if show_for_each_dotmode:
-            plot_info(ax, dotmode)
-    if not show_for_each_dotmode:
-        plot_info(ax, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]])
+            plot_info(ax, '{0}'.format(dotmode) + ' {0}'.format(subjs[0].upper()) if len(subjs) == 1 else '')
+    if not show_for_each_dotmode and ndurinds == 1:
+        plot_info(ax, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (' {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+    elif not show_for_each_dotmode:
+        plot_info(ax, "all durations" + (' {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     if plot_thresh:
         plot_and_fit_thresholds(pts, thresh_val)
 
@@ -277,10 +303,11 @@ if __name__ == '__main__':
     parser.add_argument('--thresh', action='store_true', default=False)
     parser.add_argument('--nboots', required=False, type=int, default=0)
     parser.add_argument('--plot-thresh', action='store_true', default=False)
+    parser.add_argument('--join-dotmode', action='store_true', default=False)
     parser.add_argument('--thresh-val', type=float, default=0.75)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:
-        thresholds(ps, args.nboots, args.plot_thresh, args.thresh_val)
+        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val)
     else:
         main(ps)

@@ -3,6 +3,7 @@ import glob
 import pickle
 import argparse
 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -48,15 +49,21 @@ def plot_all_by_key(df, key):
             y1 = ymin
         if ymax > y2:
             y2 = ymax
+    mean_x, mean_y = df.groupby('dotmode').agg(np.mean)[key]
+    plt.plot(mean_x, mean_y, label='mean', marker='o', linestyle='', color='red')
+    plt.annotate('average tau = {0:.2f}, {1:.2f}'.format(mean_x, mean_y), xy=(mean_x, mean_y), xytext=(mean_x*1.07, mean_y))
     plot_info(key, (y1, y2), True, 'upper left')
 
 def main(indir, key):
     fits = load(indir)
     df = prep(fits)
+    df = df[df[key] <= 200]
+    # df = df[df['coh'] != 0.03]
     plot_all_by_key(df, 'T')
-    plt.xlim([None, 200])
-    plt.ylim([None, 200])
+    # plt.xlim([None, 200])
+    # plt.ylim([None, 200])
     plt.show()
+    return
     plot_all_by_key(df, 'A')
     plt.xlim([0.4, 1.1])
     plt.ylim([0.4, 1.1])
