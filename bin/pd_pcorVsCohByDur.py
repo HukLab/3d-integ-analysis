@@ -3,6 +3,7 @@ import itertools
 
 import argparse
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 from scipy.optimize import minimize
@@ -75,7 +76,9 @@ def plot_weibull_with_data(dfc, dotmode, theta, thresh, color, dur, ax, show_for
         label = ''
     ax.scatter(xsp, ysp, color=color, label=label, marker='o')
     xsc = np.linspace(min(xsp), max(xsp))
-    plt.axvline(thresh, color=color, linestyle='--')
+    if not show_for_each_dotmode:
+        plt.axvline(thresh, color=color, linestyle='--')
+        plt.text(thresh + 0.01, 0.5 if dotmode == '2d' else 0.45, 'threshold={0}%'.format(int(thresh*100)), color=color)
     ax.plot(xsc, weibull(xsc, theta), color=color, linestyle='-')
 
 def solve_one_duration(xs, ys, di, thresh_val):
@@ -213,9 +216,14 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
                 slope, intercept, r_value, p_value, std_err = linregress(np.log(x), np.log(y))
                 print '{3}, {4}: slope={0}, intercept={1}, r^2={2}'.format(slope, intercept, r_value**2, dotmode, i+1)
             if x_split is not None:
+                ws = pd.DataFrame({'dur': x, 'pcor': y}).groupby('dur').agg([np.mean, np.std])
+                ws['pcor_lower'] = ws['pcor']['mean'] - ws['pcor']['std']
+                ws['pcor_upper'] = ws['pcor']['mean'] + ws['pcor']['std']
+                x, y, yerr = ws.index.values.astype('float'), ws['pcor']['mean'].values, ws['pcor']['std'].values
+                yerr = zip(*np.log(ws[['pcor_lower', 'pcor_upper']]).values)
                 x0 = [min(x), x_split] if i == 0 else [x_split, max(x)]
                 plt.plot(np.log(x0), slope*np.log(x0) + intercept, color=color)
-                plt.scatter(np.log(x), np.log(y), label=dotmode, color=color)
+                plt.errorbar(np.log(x), np.log(y), yerr=yerr, marker='o', linestyle='', label=dotmode if i==0 else '', color=color)
                 plt.text(np.mean(np.log(x0)), np.mean(np.log(y)), 'slope={0:.2f}'.format(slope), color=color)
     plt.title('{0}% coh thresh vs. duration'.format(int(thresh_val * 100)))
     set_xticks(pts, ax)
@@ -261,11 +269,11 @@ def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val):
         xs, ys = zip(*[(durmap[di], thresh) for di in sorted(threshes) for thresh in threshes[di]])
         pts[dotmode] = (xs, ys)
         if show_for_each_dotmode:
-            plot_info(ax, '{0}'.format(dotmode) + ' {0}'.format(subjs[0].upper()) if len(subjs) == 1 else '')
+            plot_info(ax, '{0}'.format(dotmode) + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     if not show_for_each_dotmode and ndurinds == 1:
-        plot_info(ax, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (' {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+        plot_info(ax, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     elif not show_for_each_dotmode:
-        plot_info(ax, "all durations" + (' {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+        plot_info(ax, "all durations" + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     if plot_thresh:
         plot_and_fit_thresholds(pts, thresh_val)
 

@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from dio import makefn
+from tools import color_list
 from session_info import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
 from sample import bootstrap_se
 from saturating_exponential import saturating_exp
@@ -49,7 +50,7 @@ def plot_fit_hist(fits, outfile):
         pass
     plt.savefig(outfile)
 
-def pcor_curves(results, cohs, bins, cond, outfile):
+def pcor_curves(results, cohs, bins, subj, cond, outfile):
     min_dur, max_dur = min(bins), max(bins)
     # xs = np.linspace(min_dur, max_dur)
     xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
@@ -64,23 +65,28 @@ def pcor_curves(results, cohs, bins, cond, outfile):
     nrows = 3
     ncols = int((len(cohs)-0.5)/nrows)+1
     sec_to_ms = lambda xs: [x*1000 for x in xs]
+    color = COLOR_MAP[cond]
+    colmap = dict((coh, col) for coh, col in zip([0]*1 + cohs, color_list(len(cohs) + 1, "YlGnBu")))
 
     plt.clf()
     for i, coh in enumerate(cohs):
-        plt.subplot(ncols, nrows, i+1)
-        plt.title('{0}% coherence'.format(int(coh*100)))
-        plt.xlabel('duration (ms)')
-        plt.ylabel('% correct')
+        # plt.subplot(ncols, nrows, i+1)
+        # plt.title('{0}% coherence'.format(int(coh*100)))
+        # plt.xlabel('duration (ms)')
+        # plt.ylabel('% correct')
+        color = colmap[coh]
+        label = int(coh*100)
         for method in results:
+            # label = method.upper()
             if method in NON_COH_METHODS:
                 for res in results[method]:
                     xs2 = [(coh, x) for x in xs]
                     ys = FIT_FCNS[method](xs2, res)
-                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond], linewidth=2, linestyle=LINESTYLE_MAP[method], label=method.upper())
+                    plt.plot(sec_to_ms(xs), ys, color=color, linewidth=2, linestyle=LINESTYLE_MAP[method], label=label)
             elif method in METHODS:
                 for res in results[method][coh]:
                     ys = FIT_FCNS[method](xs, res)
-                    plt.plot(sec_to_ms(xs), ys, color=COLOR_MAP[cond],  linewidth=2, linestyle=LINESTYLE_MAP[method], label=method.upper())
+                    plt.plot(sec_to_ms(xs), ys, color=color,  linewidth=2, linestyle=LINESTYLE_MAP[method], label=label)
             # plot_fit_hist(results[method], outfile.replace('.png', '{0}_{1}_{2}.png'.format(cond, coh, method)))
             # yserr = pcor_curve_error(results[method], xs2, yf2)
             # plt.errorbar(sec_to_ms(xs), ys, yerr=yserr, fmt=None, ecolor=COLOR_MAP[cond])
@@ -91,18 +97,28 @@ def pcor_curves(results, cohs, bins, cond, outfile):
             ys_binned, yserr_binned, ys_n = zip(*ys_binned)
         else:
             raise Exception("Internal")
-        plt.plot(sec_to_ms(xs_binned), ys_binned, color=COLOR_MAP[cond], marker='.', linestyle='None')
-        plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=COLOR_MAP[cond])
-        plt.xscale('log')
-        # plt.xlim(0, 1500)
-        plt.ylim(0.2, 1.1)
+        plt.plot(sec_to_ms(xs_binned), ys_binned, color=color, marker='.', linestyle='None')
+        plt.errorbar(sec_to_ms(xs_binned), ys_binned, yerr=yserr_binned, fmt=None, ecolor=color)
+        # plt.xscale('log')
+        # plt.ylim(0.2, 1.1)
+    # try:
+    #     plt.tight_layout()
+    # except:
+    #     pass
+    plt.title('{0} {1}'.format(subj.upper(), cond))
+    plt.xlabel('duration (ms)')
+    plt.ylabel('% correct')
+    plt.xscale('log')
+    plt.xlim(30, 1600)
+    plt.ylim(0.4, 1.05)
     # plt.legend()
-    try:
-        plt.tight_layout()
-    except:
-        pass
-    # plt.show()
-    plt.savefig(outfile)
+    ax = plt.gca()
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    plt.show()
+    # plt.savefig(outfile)
 
 def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, title, ylabel):
     plt.clf()
@@ -199,7 +215,7 @@ def main(conds, subj, indir, outdir):
                 logging.error(msg)
                 continue
             outfile = make_outfile(OUTDIR, subj, cond, 'fit')
-            pcor_curves(res['fits'], res['cohs'], res['bins'], cond, outfile)
+            pcor_curves(res['fits'], res['cohs'], res['bins'], subj, cond, outfile)
             results_both[cond] = res['fits']
         if res:
             param_curve_both_conds(results_both, res['cohs'], ['drift'], make_outfile(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh')
