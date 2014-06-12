@@ -41,7 +41,7 @@ def plot_inner_across_cohs(ax, df, dotmode, fit=True):
             A, T = 0.8691109, 63.54061409
         elif dotmode == '3d': # 0.84060266  496.6706102
             A, T = 0.7330778, 135.2477195
-        xs, ys, th = fit_curve(df, A, T)
+        xs, ys, th = fit_curve(df)#, A, T)
         th = list(th)
         th[-1] += 39 # for delay
         if xs is not None:
@@ -69,9 +69,10 @@ def plot(ax, df, dotmode, show_for_each_dotmode):
     else:
         plot_inner_across_cohs(ax, df, dotmode)
 
-def main(args, show_for_each_dotmode):
+def main(args, show_for_each_dotmode, savefig=False):
     df = load(args)
     subjs = df['subj'].unique()
+    outfile = '/Users/mobeets/Desktop/plots/{subj}-{dotmode}.png'
     if not show_for_each_dotmode:
         fig = plt.figure()
         ax = plt.subplot(111)
@@ -81,16 +82,20 @@ def main(args, show_for_each_dotmode):
             ax = plt.subplot(111)
         plot(ax, df_dotmode, dotmode, show_for_each_dotmode)
         if show_for_each_dotmode:
-            plt.show()
+            if savefig:
+                plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode=dotmode))
+            else:
+                plt.show()
     if not show_for_each_dotmode:
         plot_info(ax, 'all cohs' + ', {0}'.format(subjs[0].upper() if len(subjs) == 1 else ''))
         plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--subj", required=False, type=str, help="")
-    parser.add_argument("--dotmode", required=False, type=str, help="")
+    parser.add_argument("-s", "--subj", required=False, type=str, help="")
+    parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
     parser.add_argument('--join-dotmode', action='store_true', default=False)
+    parser.add_argument('--savefig', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
-    main(ps, not args.join_dotmode)
+    main(ps, not args.join_dotmode, args.savefig)

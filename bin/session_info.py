@@ -1,4 +1,4 @@
-NBOOTS = 100
+NBOOTS = 50
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
 
 QUICK_FIT = False
@@ -24,7 +24,7 @@ THETAS_TO_FIT = {
 }
 
 LINESTYLE_MAP = {
-    'huk': 'dotted',
+    'huk': 'solid',
     'sat-exp': 'solid',
     'drift': 'solid',#'dashed',
     'twin-limb': 'solid',
@@ -34,6 +34,12 @@ COLOR_MAP = {'2d': 'g', '3d': 'r'}
 MARKER_MAP = {'2d': 's', '3d': 's'}
 
 import numpy as np
+
+NDOTS = 40
+FRATE = 60
+nsigframes = lambda duration: np.ceil(duration*FRATE) - 1
+nsigdots = lambda coherence, duration: coherence*NDOTS*nsigframes(duration)
+
 # BINS = list(np.array([2, 3, 5, 8, 12, 18, 26, 36, 48, 62, 76, 94, 114])*(1/60.))
 min_dur, max_dur, N = 0.039, 1.2, 10
 BINS = list(np.logspace(np.log10(min_dur), np.log10(max_dur), N))

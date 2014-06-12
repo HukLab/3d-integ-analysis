@@ -11,6 +11,7 @@ from scipy.optimize import minimize
 from sample import bootstrap
 from tools import color_list
 from pd_io import load, default_filter_df
+from weibull import weibull, inv_weibull, solve
 
 def make_durmap(df):
     return dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
@@ -18,52 +19,6 @@ def make_durmap(df):
 def make_colmap(durinds):
     cols = color_list(len(durinds))
     return dict((di, col) for di, col in zip(durinds, cols))
-
-def params(theta):
-    if len(theta) == 2:
-        a, b = theta
-        maxV = 1.0
-    elif len(theta) == 3:
-        a, b, maxV = theta
-    else:
-        raise Exception("params must be length 2 or 3: {0}".format(theta))
-    minV = 0.5
-    return a, b, minV, maxV
-
-def weibull(x, theta):
-    """
-    theta = scale, shape, maxV [optional, in case performance is less than 1]
-    """
-    a, b, minV, maxV = params(theta)
-    return maxV - (maxV-minV) * np.exp(-pow(x/a, b))
-
-def inv_weibull(theta, y):
-    """
-    the function calculates the inverse of a weibull function
-    with given parameters (theta) for a given y value
-    returns the x value
-    """
-    a, b, minV, maxV = params(theta)
-    return a * pow(np.log((maxV-minV)/(maxV-y)), 1.0/b)
-
-def weibull_mle(theta, xs, ys):
-    yh = weibull(xs, theta)
-    logL = np.sum(ys*np.log(yh) + (1-ys)*np.log(1-yh))
-    if np.isnan(logL):
-        yh = yh*0.99 + 0.005
-        logL = np.sum(ys*np.log(yh) + (1-ys)*np.log(1-yh))
-    return -logL
-
-def solve(xs, ys, guess=(0.3, 1.0), ntries=20):
-    neg_log_likelihood_fcn = lambda theta: weibull_mle(theta, xs, ys)
-    for i in xrange(ntries):
-        if i > 0:
-            guess = (guess[0] + i/10.0, guess[1] + i/10.0)
-        soln = minimize(neg_log_likelihood_fcn, guess, method='TNC', bounds=[(0, None), (0, None)], constraints=[])
-        if soln['success']:
-            theta_hat = soln['x']
-            return theta_hat
-    return None
 
 def plot_weibull_with_data(dfc, dotmode, theta, thresh, color, dur, ax, show_for_each_dotmode, is_boot):
     xsp, ysp = zip(*dfc.groupby('coherence', as_index=False)['correct'].agg(np.mean).values)
@@ -96,7 +51,8 @@ def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmo
     durmap = make_durmap(df)
     threshes, thetas = dict(zip(durinds, [list() for _ in xrange(len(durinds))])), dict(zip(durinds, [list() for _ in xrange(len(durinds))]))
     for di, df_durind in df.groupby('duration_index'):
-        zss = [bootstrap(y.values, nboots) for x,y in df_durind[['coherence','correct']].sort('coherence').groupby('coherence')]
+        xy = df_durind[['coherence','correct']].sort('coherence').groupby('coherence')
+        zss = [bootstrap(y.values, nboots) for x,y in xy]
         zss = [np.vstack([z[i] for z in zss]) for i in xrange(nboots)]
         print di
         for i in xrange(nboots+1):
@@ -112,6 +68,7 @@ def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmo
                 plot_weibull_with_data(df_durind, dotmode, theta, thresh, colmap[di], durmap[di], ax, show_for_each_dotmode, i>0)
             thetas[di].append(theta)
             threshes[di].append(thresh)
+        # plot_weibull_with_data(df_durind, dotmode, np.mean(np.array(thetas[di]),0), inv_weibull(np.mean(np.array(thetas[di]),0), thresh_val), colmap[di], durmap[di], ax, show_for_each_dotmode, i>0)
     return threshes, thetas
 
 def solve_ignoring_durations(df, dotmode, nboots, thresh_val, ax):
@@ -179,7 +136,7 @@ def find_elbow(xs, ys, presets=None, ntries=10):
             return theta_hat
     return None
 
-def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=True):
+def plot_and_fit_thresholds(pts, thresh_val, savefig, subj_label, x_split_default=82, solve_elbow=True):
     # presets = (None, -1.0, None, -0.5, None)
     presets = None
     fig = plt.figure()
@@ -218,25 +175,31 @@ def plot_and_fit_thresholds(pts, thresh_val, x_split_default=82, solve_elbow=Tru
                 slope, intercept, r_value, p_value, std_err = linregress(np.log(x), np.log(y))
                 print '{3}, {4}: slope={0}, intercept={1}, r^2={2}'.format(slope, intercept, r_value**2, dotmode, i+1)
             if x_split is not None:
-                ws = pd.DataFrame({'dur': x, 'pcor': y}).groupby('dur').agg([np.mean, np.std])
-                ws['pcor_lower'] = ws['pcor']['mean'] - ws['pcor']['std']
-                ws['pcor_upper'] = ws['pcor']['mean'] + ws['pcor']['std']
-                x, y, yerr = ws.index.values.astype('float'), ws['pcor']['mean'].values, ws['pcor']['std'].values
-                yerr = zip(*np.log(ws[['pcor_lower', 'pcor_upper']]).values)
+                # ws = pd.DataFrame({'dur': x, 'pcor': y}).groupby('dur').agg([np.mean, np.std])
+                # ws['pcor_lower'] = ws['pcor']['mean'] - ws['pcor']['std']
+                # ws['pcor_upper'] = ws['pcor']['mean'] + ws['pcor']['std']
+                # x, y, yerr = ws.index.values.astype('float'), ws['pcor']['mean'].values, ws['pcor']['std'].values
+                # yerr = zip(*np.log(ws[['pcor_lower', 'pcor_upper']]).values)
+                # plt.errorbar(np.log(x), np.log(y), yerr=yerr, marker='o', linestyle='', label=dotmode if i==0 else '', color=color)
+                plt.scatter(np.log(x), np.log(y), marker='o', s=4, label=dotmode if i==0 else '', color=color)
                 x0 = [min(x), x_split] if i == 0 else [x_split, max(x)]
                 plt.plot(np.log(x0), slope*np.log(x0) + intercept, color=color)
-                plt.errorbar(np.log(x), np.log(y), yerr=yerr, marker='o', linestyle='', label=dotmode if i==0 else '', color=color)
                 plt.text(np.mean(np.log(x0)), np.mean(np.log(y)), 'slope={0:.2f}'.format(slope), color=color)
-    plt.title('{0}% coh thresh vs. duration'.format(int(thresh_val * 100)))
+    plt.title('{0}: {1}% coh thresh vs. duration'.format(subj_label, int(thresh_val * 100)))
     set_xticks(pts, ax)
     set_yticks(pts, ax)
     plt.xlabel('duration (ms)')
     plt.ylabel('{0}% coh thresh'.format(int(thresh_val * 100)))
+    # plt.ylim([None, None])
     plt.legend()
-    plt.show()
+    if savefig:
+        outfile = '/Users/mobeets/Desktop/plots/{0}.png'.format(subj_label)
+        plt.savefig(outfile)
+    else:
+        plt.show()
 
-def plot_info(ax, label):
-    plt.title('{0}: % correct vs. coherence'.format(label))
+def plot_info(ax, savefig, label, sublabel=None):
+    plt.title('{0}: % correct vs. coherence'.format(label + (', ' + sublabel if sublabel else '')))
     plt.xlabel('coherence')
     plt.ylabel('% correct')
     # plt.xlim([0.0, 1.05])
@@ -245,12 +208,18 @@ def plot_info(ax, label):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.show()
 
-def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val):
+    if savefig:
+        outfile = '/Users/mobeets/Desktop/plots/{0}-{1}.png'.format(sublabel, label)
+        plt.savefig(outfile)
+    else:
+        plt.show()
+
+def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, savefig):
     df = default_filter_df(load(args))
     ndurinds = len(df['duration_index'].unique())
     subjs = df['subj'].unique()
+    subj_label = '{0}'.format(subjs[0].upper()) if len(subjs) == 1 else 'ALL'
     if ndurinds == 1:
         show_for_each_dotmode = False
     if not show_for_each_dotmode:
@@ -271,18 +240,21 @@ def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val):
         xs, ys = zip(*[(durmap[di], thresh) for di in sorted(threshes) for thresh in threshes[di]])
         pts[dotmode] = (xs, ys)
         if show_for_each_dotmode:
-            plot_info(ax, '{0}'.format(dotmode) + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+            plot_info(ax, savefig, dotmode, subj_label)
     if not show_for_each_dotmode and ndurinds == 1:
-        plot_info(ax, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+        plot_info(ax, savefig, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     elif not show_for_each_dotmode:
-        plot_info(ax, "all durations" + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+        plot_info(ax, savefig, "all durations", subj_label)
     if plot_thresh:
-        plot_and_fit_thresholds(pts, thresh_val)
+        plot_and_fit_thresholds(pts, thresh_val, savefig, subj_label)
 
-def plot(df, dotmode):
+def plot(df, dotmode, savefig):
     durinds = sorted(df['duration_index'].unique())
     colmap = make_colmap(durinds)
     durmap = make_durmap(df)
+
+    subjs = df['subj'].unique()
+    outfile = '/Users/mobeets/Desktop/plots/{subj}-{dotmode}.png'
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -293,17 +265,20 @@ def plot(df, dotmode):
     plt.title('{0}: % correct vs. coherence, by duration'.format(dotmode))
     plt.xlabel('coherence')
     plt.ylabel('% correct')
-    plt.xlim([0.0, 1.05])
+    # plt.xlim([0.0, 1.05])
     plt.ylim([0.4, 1.05])
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.show()
+    if savefig:
+        plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode=dotmode))
+    else:
+        plt.show()
 
-def main(args):
+def main(args, savefig):
     df = load(args)
     for dotmode, df_dotmode in df.groupby('dotmode'):
-        plot(df_dotmode, dotmode)
+        plot(df_dotmode, dotmode, savefig)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -314,10 +289,11 @@ if __name__ == '__main__':
     parser.add_argument('--nboots', required=False, type=int, default=0)
     parser.add_argument('--plot-thresh', action='store_true', default=False)
     parser.add_argument('--join-dotmode', action='store_true', default=False)
+    parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--thresh-val', type=float, default=0.75)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:
-        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val)
+        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val, args.savefig)
     else:
-        main(ps)
+        main(ps, args.savefig)

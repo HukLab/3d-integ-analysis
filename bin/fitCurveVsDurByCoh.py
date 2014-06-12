@@ -199,9 +199,6 @@ def main(dotmodes, subj, fits_to_fit, outdir):
         raise Exception(msg)
 
 if __name__ == '__main__':
-    """
-    NOTE: See http://courses.washington.edu/matlab1/Lesson_5.html
-    """
     ALL_FITS = FIT_IS_COHLESS.keys()
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
