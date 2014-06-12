@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_COHLESS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT, THETAS_TO_FIT
+from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_COHLESS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT, THETAS_TO_FIT, min_dur, max_dur
 from mle import pick_best_theta, generic_fit
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
@@ -143,6 +143,9 @@ def sample_trials_by_session(trials, dotmode, mult=5):
     logging.info(msg)
     return ts_all
 
+def remove_trials_by_duration(trials, dotmode):
+    return [t for t in trials if min_dur <= t.duration <= max_dur]
+
 def remove_trials_by_coherence(trials, dotmode):
     cohs = good_cohs[dotmode]
     return [t for t in trials if t.coherence in cohs]
@@ -150,6 +153,8 @@ def remove_trials_by_coherence(trials, dotmode):
 def fit(subj, dotmode, fits_to_fit, trials, bins, outfile, resample=False):
     trials = remove_bad_trials_by_session(trials, dotmode)
     trials = remove_trials_by_coherence(trials, dotmode)
+    1/0
+    trials = remove_trials_by_duration(trials, dotmode)
     if resample:
         trials = sample_trials_by_session(trials, dotmode)
     return fit_session_curves(trials, bins, subj, dotmode, fits_to_fit, outfile)

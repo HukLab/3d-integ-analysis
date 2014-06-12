@@ -85,9 +85,9 @@ def solve_one_duration(xs, ys, di, thresh_val):
     theta = solve(xs, ys)
     thresh = inv_weibull(theta, thresh_val) if theta is not None else None
     if theta is None:
-        print 'ERROR   (di={0})'.format(di)
+        pass # print 'ERROR   (di={0})'.format(di)
     else:
-        print 'SUCCESS (di={0}): {1}, {2}'.format(di, theta, np.log(thresh))
+        pass # print 'SUCCESS (di={0}): {1}, {2}'.format(di, theta, np.log(thresh))
     return theta, thresh
 
 def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmode):
@@ -98,6 +98,7 @@ def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmo
     for di, df_durind in df.groupby('duration_index'):
         zss = [bootstrap(y.values, nboots) for x,y in df_durind[['coherence','correct']].sort('coherence').groupby('coherence')]
         zss = [np.vstack([z[i] for z in zss]) for i in xrange(nboots)]
+        print di
         for i in xrange(nboots+1):
             if i == 0:
                 xs, ys = zip(*df_durind[['coherence','correct']].values)
@@ -162,7 +163,8 @@ def find_elbow(xs, ys, presets=None, ntries=10):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1])
         yh = z[0]*z[1] + (1-z[0])*z[2]
         return np.sum(np.power(ys-yh, 2))
-    bounds = [(min(xs), max(xs)), (None, 0), (None, None), (None, 0), (None, None)]
+    x0_max_ms = 0
+    bounds = [(min(xs), np.log(np.exp(max(xs))-x0_max_ms)), (None, 0), (None, None), (None, 0), (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     if presets is not None:
         assert len(presets) == 5

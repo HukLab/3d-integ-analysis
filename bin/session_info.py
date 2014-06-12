@@ -1,4 +1,4 @@
-NBOOTS = 0
+NBOOTS = 100
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
 
 QUICK_FIT = False
@@ -35,7 +35,7 @@ MARKER_MAP = {'2d': 's', '3d': 's'}
 
 import numpy as np
 # BINS = list(np.array([2, 3, 5, 8, 12, 18, 26, 36, 48, 62, 76, 94, 114])*(1/60.))
-min_dur, max_dur, N = 0.039, 1.5, 10
+min_dur, max_dur, N = 0.039, 1.2, 10
 BINS = list(np.logspace(np.log10(min_dur), np.log10(max_dur), N))
 # BINS = list(np.linspace(min_dur, max_dur, N))
 # BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]

@@ -49,8 +49,11 @@ def shift_bins(df, durbin_3d=2, durbin_floor=1):
     df = df[df['duration_index'] >= durbin_floor]
     return df
 
-def rebin(df, N=10):
-    min_dur, max_dur = 0.04, 1.2 #df['duration'].min(), df['duration'].max()
+def rebin(df, min_dur, max_dur, N=10):
+    """
+    reassigns duration_index of each trial by rebinning with N log-spaced durations between min_dur and max_dur
+    removes trials with duration above the max_dur
+    """
     bins = list(np.logspace(np.log10(min_dur), np.log10(max_dur), N))
     bins = bins[1:]
     bins[-1] = max_dur + 0.01
@@ -64,7 +67,7 @@ def default_filter_df(df):
     """
     good_subjects, bad_sessions, good_cohs
     """
-    df = rebin(df, 20)
+    df = rebin(df, 0.04, 1.2, 20)
     # good_subjects
     ffs = []
     for dotmode, subjs in good_subjects.iteritems():

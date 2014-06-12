@@ -117,8 +117,8 @@ def pcor_curves(results, cohs, bins, subj, cond, outfile):
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-    plt.show()
-    # plt.savefig(outfile)
+    # plt.show()
+    plt.savefig(outfile)
 
 def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, title, ylabel):
     plt.clf()
@@ -127,7 +127,7 @@ def param_curve(xss, yss, yerrs, colors, markers, linestyles, labels, outfile, t
     plt.ylabel(ylabel)
     assert len(xss) == len(yss) == len(colors) == len(labels) == len(markers) == len(linestyles)
     for xs, ys, yerr, col, mkr, lin, lbl in zip(xss, yss, yerrs, colors, markers, linestyles, labels):
-        plt.plot(xs, ys, color=col, linestyle=lin, marker=mkr, label=lbl)
+        plt.plot(xs, ys, color=col, linestyle=lin, marker=mkr, label=lbl, markersize=4)
         plt.errorbar(xs, ys, yerr=yerr, fmt=None, ecolor=col)
     plt.xscale('log')
     # plt.yscale('log')
@@ -162,12 +162,14 @@ def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
             xs = sorted(res[method].keys()) # cohs
             xss.append(xs)
             if method in NON_COH_METHODS:
-                ys = [res[method][0][key]*coh for coh in xs]
+                ys = [coh*np.mean([x[key] for x in res[method]]) for coh in xs]
+                # ys = [res[method][0][key]*coh for coh in xs]
                 yerr = [[coh*x for x in get_param_bounds(res[method], key)] for coh in xs]
             else:
                 # for coh in xs:
                 #     plot_fit_hist(res[method][coh], outfile.replace('.png', '_' + cond + '_' + str(coh) + '.png'))
-                ys = [res[method][coh][0][key] for coh in xs]
+                ys = [np.mean([x[key] for x in res[method][coh]]) for coh in xs]
+                # ys = [res[method][coh][0][key] for coh in xs]
                 yerr = [get_param_bounds(res[method][coh], key) for coh in xs]
             yss.append(ys)
             yerrs.append(zip(*yerr)) # [lower_bounds, upper_bounds]
