@@ -153,7 +153,6 @@ def remove_trials_by_coherence(trials, dotmode):
 def fit(subj, dotmode, fits_to_fit, trials, bins, outfile, resample=False):
     trials = remove_bad_trials_by_session(trials, dotmode)
     trials = remove_trials_by_coherence(trials, dotmode)
-    1/0
     trials = remove_trials_by_duration(trials, dotmode)
     if resample:
         trials = sample_trials_by_session(trials, dotmode)
