@@ -24,7 +24,7 @@ def load_df(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
     return df2.join(df1, on='session_index')
 
 make_equal_filter = lambda key, val: (key, lambda x: x == val)
-make_gt_filter = lambda key, val: (key, lambda x: x > val)
+make_gt_filter = lambda key, val: (key, lambda x: x >= val)
 
 def interpret_filters(args):
     filters = []
@@ -92,9 +92,10 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(args=None):
+def load(args=None, filters=None):
     df = load_df()
-    df = filter_df(df, interpret_filters(args))
+    fltrs = filters if filter is not None else []
+    df = filter_df(df, fltrs + interpret_filters(args))
     return default_filter_df(df)
 
 def main(args):

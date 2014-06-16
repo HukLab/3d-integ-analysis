@@ -10,7 +10,7 @@ from scipy.optimize import minimize
 
 from sample import bootstrap
 from tools import color_list
-from pd_io import load, default_filter_df
+from pd_io import load, default_filter_df, make_gt_filter
 from weibull import weibull, inv_weibull, solve
 
 def make_durmap(df):
@@ -215,8 +215,13 @@ def plot_info(ax, savefig, label, sublabel=None):
     else:
         plt.show()
 
+def custom_filter_1():
+    return [make_gt_filter('duration', 0.7)]
+
 def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, savefig):
     df = default_filter_df(load(args))
+    # df = default_filter_df(load(args, custom_filter_1()))
+    print df.describe()
     ndurinds = len(df['duration_index'].unique())
     subjs = df['subj'].unique()
     subj_label = '{0}'.format(subjs[0].upper()) if len(subjs) == 1 else 'ALL'

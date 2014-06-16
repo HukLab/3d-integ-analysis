@@ -55,7 +55,7 @@ def sort_trials(infile, outfile):
     with open(outfile, 'w') as f:
         json.dump(trials, f, cls=MyEncoder)
 
-def mat_to_json(datadir, outfile):
+def jsons_to_json(datadir, outfile):
     infiles = glob.glob(os.path.join(datadir, '*.json'))
     trials = []
     for infile in infiles:
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     datadir = os.path.join(basedir, 'json')
     outfile = os.path.join(basedir, 'data-2.json')
 
-    ntrials = mat_to_json(datadir, outfile)
+    ntrials = jsons_to_json(datadir, outfile)
     xs = load_json(outfile)
     assert len(xs) == ntrials
     print 'SUCCESS'

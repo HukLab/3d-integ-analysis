@@ -23,7 +23,6 @@ def params(theta, unfold=False):
 
 def weibull(x, theta, unfold=False):
     """
-    theta = scale, shape, maxV [optional, in case performance is less than 1]
     """
     a, b, minV, maxV = params(theta, unfold)
     return maxV - (maxV-minV) * np.exp(-pow(x/a, b))
