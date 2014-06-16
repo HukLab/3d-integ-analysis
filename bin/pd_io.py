@@ -94,7 +94,7 @@ def default_filter_df(df):
 
 def load(args=None, filters=None):
     df = load_df()
-    fltrs = filters if filter is not None else []
+    fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(args))
     return default_filter_df(df)
 
