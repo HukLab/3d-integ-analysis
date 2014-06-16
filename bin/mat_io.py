@@ -101,13 +101,13 @@ def trials_to_csv(trials, sessions_file, trials_file):
 def main():
     DATADIR = '/Volumes/LKCLAB/Users/Leor/2012-TemporalIntegration/runDots_KTZ_data'
     CURDIR = os.path.dirname(os.path.abspath(__file__))
-    BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
+    BASEDIR = os.path.abspath(os.path.join(CURDIR, '..', 'data'))
 
     OUTFILE = os.path.join(BASEDIR, 'data-2.json')
     trials = mat_to_json(DATADIR, OUTFILE)
 
-    CSV_SESSIONS_FILE = os.path.join(BASEDIR, 'csv', 'sessions-2.csv')
-    CSV_TRIALS_FILE = os.path.join(BASEDIR, 'csv', 'trials-2.csv')
+    CSV_SESSIONS_FILE = os.path.join(BASEDIR, 'sessions-2.csv')
+    CSV_TRIALS_FILE = os.path.join(BASEDIR, 'trials-2.csv')
     trials_to_csv(trials, CSV_SESSIONS_FILE, CSV_TRIALS_FILE)
 
     compare_sessions_csv(CSV_SESSIONS_FILE.replace('-2', ''), CSV_SESSIONS_FILE)

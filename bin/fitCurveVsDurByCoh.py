@@ -182,7 +182,7 @@ def across_subjects(trials, dotmodes, fits_to_fit, bins, outdir):
 def main(dotmodes, subj, fits_to_fit, outdir):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
-    INFILE = os.path.join(BASEDIR, 'data.json')
+    INFILE = os.path.join(BASEDIR, 'data', 'data.json')
     OUTDIR = os.path.join(BASEDIR, 'res', outdir)
     TRIALS = load_json(INFILE)
     if subj == 'ALL':

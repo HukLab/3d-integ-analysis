@@ -6,7 +6,7 @@ class CommonEqualityMixin(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-class Session():
+class Session:
     def __init__(self, subject, dotmode, duration_bins, index):
         self.subject = subject
         self.dotmode = dotmode # 2d / 3d

@@ -1,4 +1,4 @@
-NBOOTS = 50
+NBOOTS = 0
 NBOOTS_BINNED_PS = 1000 # also used by huk fit
 
 QUICK_FIT = False

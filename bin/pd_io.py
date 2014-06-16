@@ -13,8 +13,8 @@ COL_TYPES = [int, int, float, float, int, float, int, bool, str, str, int]
 
 CURDIR = os.path.dirname(os.path.abspath(__file__))
 BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
-SESSIONS_INFILE = os.path.join(BASEDIR, 'csv', 'sessions.csv')
-TRIALS_INFILE = os.path.join(BASEDIR, 'csv', 'trials.csv')
+SESSIONS_INFILE = os.path.join(BASEDIR, 'data', 'sessions.csv')
+TRIALS_INFILE = os.path.join(BASEDIR, 'data', 'trials.csv')
 
 def load_df(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
     df1 = pd.read_csv(sessions_infile, index_col='index')
