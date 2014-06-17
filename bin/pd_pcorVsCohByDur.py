@@ -99,7 +99,7 @@ def remove_nan_or_inf(items):
 def set_xticks(pts, ax):
     vals = np.array(list(itertools.chain(*[x for x,y in pts.values()])))
     xticks = np.log(1000*vals)
-    xticks = list(set(remove_nan_or_inf(xticks)))
+    xticks = sorted(list(set(remove_nan_or_inf(xticks))))
     ax.xaxis.set_ticks(xticks)
     ax.xaxis.set_ticklabels([int(np.exp(x)) for x in xticks])
 
@@ -136,7 +136,7 @@ def find_elbow(xs, ys, presets=None, ntries=10):
             return theta_hat
     return None
 
-def plot_and_fit_thresholds(pts, thresh_val, savefig, subj_label, x_split_default=82, solve_elbow=True):
+def plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label, x_split_default=82, solve_elbow=True):
     # presets = (None, -1.0, None, -0.5, None)
     presets = None
     fig = plt.figure()
@@ -184,7 +184,7 @@ def plot_and_fit_thresholds(pts, thresh_val, savefig, subj_label, x_split_defaul
                 plt.scatter(np.log(x), np.log(y), marker='o', s=4, label=dotmode if i==0 else '', color=color)
                 x0 = [min(x), x_split] if i == 0 else [x_split, max(x)]
                 plt.plot(np.log(x0), slope*np.log(x0) + intercept, color=color)
-                plt.text(np.mean(np.log(x0)), np.mean(np.log(y)), 'slope={0:.2f}'.format(slope), color=color)
+                plt.text(np.mean(np.log(x0)), min(y) + min(y)/2, 'slope={0:.2f}'.format(slope), color=color)
     plt.title('{0}: {1}% coh thresh vs. duration'.format(subj_label, int(thresh_val * 100)))
     set_xticks(pts, ax)
     set_yticks(pts, ax)
@@ -193,12 +193,12 @@ def plot_and_fit_thresholds(pts, thresh_val, savefig, subj_label, x_split_defaul
     # plt.ylim([None, None])
     plt.legend()
     if savefig:
-        outfile = '/Users/mobeets/Desktop/plots/{0}.png'.format(subj_label)
+        outfile = os.path.join(outdir, '{0}.png'.format(subj_label))
         plt.savefig(outfile)
     else:
         plt.show()
 
-def plot_info(ax, savefig, label, sublabel=None):
+def plot_info(ax, savefig, outdir, label, sublabel=None):
     plt.title('{0}: % correct vs. coherence'.format(label + (', ' + sublabel if sublabel else '')))
     plt.xlabel('coherence')
     plt.ylabel('% correct')
@@ -210,7 +210,7 @@ def plot_info(ax, savefig, label, sublabel=None):
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     if savefig:
-        outfile = '/Users/mobeets/Desktop/plots/{0}-{1}.png'.format(sublabel, label)
+        outfile = os.path.join(outdir, '{0}-{1}.png'.format(sublabel, label))
         plt.savefig(outfile)
     else:
         plt.show()
@@ -218,7 +218,7 @@ def plot_info(ax, savefig, label, sublabel=None):
 def custom_filter_1():
     return [make_gt_filter('duration', 0.7)]
 
-def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, savefig):
+def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, savefig, outdir):
     df = default_filter_df(load(args))
     # df = default_filter_df(load(args, custom_filter_1()))
     print df.describe()
@@ -245,21 +245,21 @@ def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, sav
         xs, ys = zip(*[(durmap[di], thresh) for di in sorted(threshes) for thresh in threshes[di]])
         pts[dotmode] = (xs, ys)
         if show_for_each_dotmode:
-            plot_info(ax, savefig, dotmode, subj_label)
+            plot_info(ax, savefig, outdir, dotmode, subj_label)
     if not show_for_each_dotmode and ndurinds == 1:
-        plot_info(ax, savefig, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
+        plot_info(ax, savefig, outdir, "duration=%0.2fs" % durmap[df['duration_index'].unique()[0]] + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     elif not show_for_each_dotmode:
-        plot_info(ax, savefig, "all durations", subj_label)
+        plot_info(ax, savefig, outdir, "all durations", subj_label)
     if plot_thresh:
-        plot_and_fit_thresholds(pts, thresh_val, savefig, subj_label)
+        plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label)
 
-def plot(df, dotmode, savefig):
+def plot(df, dotmode, savefig, outdir):
     durinds = sorted(df['duration_index'].unique())
     colmap = make_colmap(durinds)
     durmap = make_durmap(df)
 
     subjs = df['subj'].unique()
-    outfile = '/Users/mobeets/Desktop/plots/{subj}-{dotmode}.png'
+    outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
 
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -280,10 +280,10 @@ def plot(df, dotmode, savefig):
     else:
         plt.show()
 
-def main(args, savefig):
+def main(args, savefig, outdir):
     df = load(args)
     for dotmode, df_dotmode in df.groupby('dotmode'):
-        plot(df_dotmode, dotmode, savefig)
+        plot(df_dotmode, dotmode, savefig, outdir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -296,9 +296,10 @@ if __name__ == '__main__':
     parser.add_argument('--join-dotmode', action='store_true', default=False)
     parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--thresh-val', type=float, default=0.75)
+    parser.add_argument('--outdir', type=str, default='.')
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:
-        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val, args.savefig)
+        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val, args.savefig, args.outdir)
     else:
-        main(ps, args.savefig)
+        main(ps, args.savefig, args.outdir)

@@ -69,10 +69,10 @@ def plot(ax, df, dotmode, show_for_each_dotmode):
     else:
         plot_inner_across_cohs(ax, df, dotmode)
 
-def main(args, show_for_each_dotmode, savefig=False):
+def main(args, show_for_each_dotmode, savefig=False, outdir=None):
     df = load(args)
     subjs = df['subj'].unique()
-    outfile = '/Users/mobeets/Desktop/plots/{subj}-{dotmode}.png'
+    outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
     if not show_for_each_dotmode:
         fig = plt.figure()
         ax = plt.subplot(111)
@@ -96,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
     parser.add_argument('--join-dotmode', action='store_true', default=False)
     parser.add_argument('--savefig', action='store_true', default=False)
+    parser.add_argument('--outdir', type=str, default='.')
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
-    main(ps, not args.join_dotmode, args.savefig)
+    main(ps, not args.join_dotmode, args.savefig, args.outdir)

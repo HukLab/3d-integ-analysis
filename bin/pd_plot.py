@@ -37,6 +37,11 @@ def save_or_show(show, outfile):
     else:
         plt.show()
 
+def plot_diff(df):
+    durmap = dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
+    df2 = df_dotmode[['coherence', 'duration_index', 'correct']]
+    df3 = df2.groupby(['coherence', 'duration_index'], as_index=False).aggregate(np.mean)
+
 def plot(df, show=True, outfile=None, fig=None):
     if len(df) == 0:
         return
