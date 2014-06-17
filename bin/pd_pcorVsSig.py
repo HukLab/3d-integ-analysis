@@ -1,3 +1,4 @@
+import os.path
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,7 +25,7 @@ def bootstrap_solve(xs0, ys0, unfold, nboots, thresh_val):
         threshes.append(thresh)
     return thetas, threshes
 
-def main(args, nboots, unfold, thresh_val=0.75):
+def main(args, nboots, unfold, savefig, outdir, thresh_val=0.75):
     df = load(args)
     subjs = df['subj'].unique()
     w = (2*(df.direction>2)-1) if unfold else 1
@@ -62,8 +63,12 @@ def main(args, nboots, unfold, thresh_val=0.75):
         # plt.xscale('log')
         plt.ylim([0.45, 1.05])
     plt.xlim([None, None])
-    plt.title(subjs[0] if len(subjs) == 0 else 'ALL')
-    plt.show()
+    subj_label = subjs[0] if len(subjs) == 0 else 'ALL'
+    plt.title(subj_label)
+    if savefig:
+        plt.savefig(os.path.join(outdir, '{0}-{1}.png'.format(subj_label, 'unfolded' if unfold else 'folded')))
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -71,5 +76,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
     parser.add_argument('--nboots', required=False, type=int, default=0)
     parser.add_argument('--unfold', required=False, action='store_true', default=False)
+    parser.add_argument('--savefig', action='store_true', default=False)
+    parser.add_argument('--outdir', type=str, default='.')
     args = parser.parse_args()
-    main({'subj': args.subj, 'dotmode': args.dotmode}, args.nboots, args.unfold)
+    main({'subj': args.subj, 'dotmode': args.dotmode}, args.nboots, args.unfold, args.savefig, args.outdir)
