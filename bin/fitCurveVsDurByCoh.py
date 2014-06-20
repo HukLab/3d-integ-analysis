@@ -7,15 +7,16 @@ import argparse
 import numpy as np
 
 from dio import load_json, makefn
-from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_COHLESS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT, THETAS_TO_FIT, min_dur, max_dur
-from mle import pick_best_theta, generic_fit
 from sample import sample_wr, bootstrap
 from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
-from huk_tau_e import binned_ps, huk_tau_e
-import saturating_exponential
-import drift_diffuse
-import quick_1974
+from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_COHLESS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT, THETAS_TO_FIT, min_dur, max_dur
+
 import twin_limb
+import quick_1974
+import drift_diffuse
+import saturating_exponential
+from huk_tau_e import binned_ps, huk_tau_e
+from mle import pick_best_theta, generic_fit
 
 logging.basicConfig(level=logging.DEBUG)
 
