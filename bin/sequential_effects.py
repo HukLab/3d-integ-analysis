@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from json_io import load_json, session_grouper, group_trials
+from pd_io import load
 from sample import bootstrap, bootstrap_se
 from session_info import bad_sessions, all_subjs
 
@@ -66,14 +66,12 @@ def sequential_effects(t1chosen, t1correct, sess_ids):
 
     return res
 
-def load(trials, subj, conds):
-    groups = group_trials(trials, session_grouper, False)
-
+def parse(df):
+    df = df.sort(['dotmode', 'subj', 'number', 'trial_index'])
+    df['resp_is_right'] = df['response'] == 2
     ds = {}
-    for cond in conds:
-        trials = groups[(subj, cond)]
-        trials = sorted(trials, key=lambda t: (t.session.index, t.index))
-        ds[cond] = zip(*[(t.response == 2, t.correct, t.session.index) for t in trials if t.session.index not in bad_sessions[cond][subj]])
+    for dotmode, dfc in df.groupby('dotmode'):
+        ds[dotmode] = zip(*dfc[['resp_is_right', 'correct', 'session_index']].values)
     return ds
 
 def load_random():
@@ -82,15 +80,14 @@ def load_random():
     t1correct = [np.random.binomial(1, 0.2) for _ in xrange(N)]
     return {'rand': [t1chosen, t1correct, None]}
 
-def main(subj, conds, outdir):
+def main(args, outdir):
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
-    INFILE = os.path.join(BASEDIR, 'data.json')
     OUTDIR = os.path.join(BASEDIR, 'res', 'sequential-effects', outdir)
-    TRIALS = load_json(INFILE)
     outfile = os.path.join(OUTDIR, '{0}-{1}.png'.format(subj, '_'.join(conds)))
 
-    ds = load(TRIALS, subj, conds)
+    df = load(args)
+    ds = parse(df)
     print 'Loaded'
     ress = dict((cond, sequential_effects(*d)) for cond, d in ds.iteritems())
     print 'Calculated'
@@ -103,4 +100,4 @@ parser.add_argument('-o', "--outdir", required=True, type=str, help="The directo
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    main(args.subj, args.conds, args.outdir)
+    main({'subj': args.subj, 'dotmode': args.conds}, args.outdir)
