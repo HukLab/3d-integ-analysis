@@ -7,14 +7,15 @@ from itertools import chain
 import numpy as np
 import matplotlib.pyplot as plt
 
-from dio import makefn
 from tools import color_list
-from session_info import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
 from sample import bootstrap_se
+from fitCurveVsDurByCoh import makefn
+from session_info import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
+
+from twin_limb import twin_limb
+from quick_1974 import quick_1974
 from saturating_exponential import saturating_exp
 from drift_diffuse import drift_diffusion, drift_diffusion_2
-from quick_1974 import quick_1974
-from twin_limb import twin_limb
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -181,9 +182,6 @@ def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
     if xss:
         param_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile, title, ylabel)
 
-def make_outfile(outdir, subj, cond, key, filetype='png'):
-    return makefn(outdir, subj, cond, key, filetype)
-
 def load_pickle(indir, subj, cond):
     infile = os.path.join(indir, '{0}-{1}-fit.pickle'.format(subj, cond))
     return pickle.load(open(infile))
@@ -216,15 +214,15 @@ def main(conds, subj, indir, outdir):
                 msg = "could not load {0} {1}".format(subj, cond)
                 logging.error(msg)
                 continue
-            outfile = make_outfile(OUTDIR, subj, cond, 'fit')
+            outfile = makefn(OUTDIR, subj, cond, 'fit', 'png')
             pcor_curves(res['fits'], res['cohs'], res['bins'], subj, cond, outfile)
             results_both[cond] = res['fits']
         if res:
-            param_curve_both_conds(results_both, res['cohs'], ['drift'], make_outfile(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh')
-            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], make_outfile(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0')
+            param_curve_both_conds(results_both, res['cohs'], ['drift'], makefn(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh', 'png')
+            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], makefn(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0', 'png')
             methods = ['sat-exp', 'huk']
-            param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A')
-            param_curve_both_conds(results_both, res['cohs'], methods, make_outfile(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)')
+            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A', 'png')
+            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)', 'png')
 
 
 if __name__ == '__main__':

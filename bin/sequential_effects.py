@@ -4,10 +4,9 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from dio import load_json
+from json_io import load_json, session_grouper, group_trials
 from sample import bootstrap, bootstrap_se
 from session_info import bad_sessions, all_subjs
-from summaries import session_grouper, group_trials
 
 def plot(ress, subj, outfile):
     width = 0.5

@@ -8,6 +8,8 @@ import pandas as pd
 from pd_plot import plot
 from session_info import good_subjects, bad_sessions, good_cohs, nsigdots
 
+SESSIONS_COLS = [u'index', u'subj', u'dotmode', u'number']
+TRIALS_COLS = [u'index', u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct']
 COLS = [u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct', u'subj', u'dotmode', u'number']
 COL_TYPES = [int, int, float, float, int, float, int, bool, str, str, int]
 
@@ -18,9 +20,9 @@ TRIALS_INFILE = os.path.join(BASEDIR, 'data', 'trials.csv')
 
 def load_df(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
     df1 = pd.read_csv(sessions_infile, index_col='index')
-    assert all(df1.keys() == [u'subj', u'dotmode', u'number'])
+    assert all(df1.keys() == SESSIONS_COLS[1:])
     df2 = pd.read_csv(trials_infile, index_col='index')
-    assert all(df2.keys() == [u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct'])
+    assert all(df2.keys() == TRIALS_COLS[1:])
     return df2.join(df1, on='session_index')
 
 make_equal_filter = lambda key, val: (key, lambda x: x == val)

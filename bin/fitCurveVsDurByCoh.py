@@ -6,9 +6,8 @@ import argparse
 
 import numpy as np
 
-from dio import load_json, makefn
 from sample import sample_wr, bootstrap
-from summaries import group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
+from json_io import load_json, group_trials, subj_grouper, dot_grouper, session_grouper, coherence_grouper, as_x_y, as_C_x_y
 from session_info import DEFAULT_THETA, BINS, NBOOTS, NBOOTS_BINNED_PS, FIT_IS_COHLESS, all_subjs, good_subjects, bad_sessions, good_cohs, bad_cohs, QUICK_FIT, THETAS_TO_FIT, min_dur, max_dur
 
 import twin_limb
@@ -19,6 +18,7 @@ from huk_tau_e import binned_ps, huk_tau_e
 from mle import pick_best_theta, generic_fit
 
 logging.basicConfig(level=logging.DEBUG)
+makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, '{0}-{1}-{2}.{3}'.format(subj, cond, name, ext))
 
 def pickle_fit(results, bins, outfile, subj, dotmode):
     """
