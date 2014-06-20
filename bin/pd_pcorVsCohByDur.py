@@ -294,8 +294,8 @@ if __name__ == '__main__':
     parser.add_argument('--nboots', required=False, type=int, default=0)
     parser.add_argument('--plot-thresh', action='store_true', default=False)
     parser.add_argument('--join-dotmode', action='store_true', default=False)
-    parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--thresh-val', type=float, default=0.75)
+    parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default='.')
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}

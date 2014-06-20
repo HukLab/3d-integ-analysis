@@ -37,8 +37,9 @@ import numpy as np
 
 NDOTS = 40
 FRATE = 60
-nsigframes = lambda duration: np.ceil(duration*FRATE) - 1
-nsigdots = lambda coherence, duration: coherence*NDOTS*nsigframes(duration)
+nframes = lambda duration: np.ceil(duration*FRATE)
+nsigframes = lambda duration: nframes(duration) - 1 # takes two to see motion
+nsigdots = lambda coherence, duration: (NDOTS*coherence)*nsigframes(duration)
 
 # BINS = list(np.array([2, 3, 5, 8, 12, 18, 26, 36, 48, 62, 76, 94, 114])*(1/60.))
 min_dur, max_dur, N = 0.039, 1.2, 10

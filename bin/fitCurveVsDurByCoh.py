@@ -135,6 +135,8 @@ def sample_trials_by_session(trials, dotmode, mult=5):
     """
     groups = group_trials(trials, subj_grouper, False)
     n = min(len(ts) for ts in groups.values())
+    print n, 5*n
+    1/0
     ts_all = []
     for subj, ts in groups.iteritems():
         ts_cur = sample_wr(ts, mult*n)
