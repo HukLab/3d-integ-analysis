@@ -34,11 +34,41 @@ def load_trials(mat, session):
     return trials
 
 def parse_session_index(infile):
-    return os.path.split(infile)[-1].split('_(')[1].split(')')[0]
+    """
+    example filename: runDots_KTZ_-_huk_czuba2d_000_(1)_wkspc
+    """
+    fname = os.path.splitext(os.path.split(infile)[-1])[0]
+    tmp = fname.split('_-_')
+    error_str = lambda fname, exp: 'WARNING ({1}): Ignoring file {0}.mat'.format(fname, exp)
+    if tmp[0] != 'runDots_KTZ':
+        print error_str(fname, 1)
+        return
+    tmp = tmp[1].split('_')
+    if len(tmp) != 5:
+        print error_str(fname, 2)
+        return
+    subj, dottype, nums, sess_no, wkspc = tmp
+    if len(dottype) != 7 or not dottype.startswith('czuba'):
+        print error_str(fname, 3)
+        return
+    if len(nums) != 3:
+        print error_str(fname, 4)
+        return
+    if wkspc != 'wkspc':
+        print error_str(fname, 5)
+        return
+    out = sess_no.split('(')[1].split(')')[0]
+    if not out.isdigit():
+        print error_str(fname, 6)
+        return
+    return int(out)
 
 def load_mat(infile):
     mat = sio.loadmat(infile)
-    session = load_session(mat, parse_session_index(infile))
+    session_index = parse_session_index(infile)
+    if session_index is None:
+        return []
+    session = load_session(mat, session_index)
     return load_trials(mat, session)
 
 def load(datadir):
