@@ -1,8 +1,6 @@
 import csv
-import json
 import glob
 import os.path
-from json import JSONEncoder
 
 import pandas as pd
 import scipy.io as sio
@@ -79,14 +77,6 @@ def load(datadir):
     master_trial_sort = lambda t: (t.session.subject, t.session.dotmode, t.session.index, t.coherence, t.duration)
     return sorted(trials, key=master_trial_sort)
 
-class MyEncoder(JSONEncoder):
-    def default(self, o):
-        return o.__dict__
-
-def trials_to_json(trials, outfile):
-    with open(outfile, 'w') as f:
-        json.dump(trials, f, cls=MyEncoder)
-
 def compare_sessions_csv(si1, si2):
     rs1 = [list(x) for x in pd.read_csv(si1, index_col='index').values]
     rs2 = [list(x) for x in pd.read_csv(si2, index_col='index').values]
@@ -131,14 +121,11 @@ def main():
     DATADIR = '/Volumes/LKCLAB/Users/Leor/2012-TemporalIntegration/runDots_KTZ_data'
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..', 'data'))
-    JSON_FILE = os.path.join(BASEDIR, 'data-2.json')
     CSV_SESSIONS_FILE = os.path.join(BASEDIR, 'sessions-2.csv')
     CSV_TRIALS_FILE = os.path.join(BASEDIR, 'trials-2.csv')
 
     trials = load(DATADIR)
-    trials_to_json(trials, JSON_FILE)
     trials_to_csv(trials, CSV_SESSIONS_FILE, CSV_TRIALS_FILE)
-
     compare_sessions_csv(CSV_SESSIONS_FILE.replace('-2', ''), CSV_SESSIONS_FILE)
 
 if __name__ == '__main__':

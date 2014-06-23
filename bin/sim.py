@@ -4,7 +4,6 @@ import math
 from numpy import random, log10, logspace, exp
 
 from session_info import BINS
-from summaries import by_coherence
 from mle import pick_best_theta
 from huk_tau_e import huk_tau_e
 import saturating_exponential
