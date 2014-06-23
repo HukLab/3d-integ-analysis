@@ -6,7 +6,7 @@ QUICK_FIT = False
 FIT_IS_COHLESS = {
     'huk': False,
     'sat-exp': False,
-    'drift': True,# False, -> enable drift_diffusion_2
+    'drift': True, # False, -> enable drift_diffusion_2
     'twin-limb': False,
     'quick_1974': True,
 }
@@ -27,7 +27,7 @@ THETAS_TO_FIT = {
 LINESTYLE_MAP = {
     'huk': 'solid',
     'sat-exp': 'solid',
-    'drift': 'solid',#'dashed',
+    'drift': 'solid',
     'twin-limb': 'solid',
     'quick_1974': 'dashdot'
 }
@@ -41,33 +41,28 @@ actualduration = lambda duration: nframes(duration)/FRATE
 nsigframes = lambda duration: nframes(duration) - 1 # takes two to see motion
 nsigdots = lambda coherence, duration: (NDOTS*coherence)*nsigframes(duration)
 
-# BINS = list(np.array([2, 3, 5, 8, 12, 18, 26, 36, 48, 62, 76, 94, 114])*(1/60.))
 min_dur, max_dur, NBINS = 0.04, 1.2, 10
 BINS = list(np.logspace(np.log10(min_dur - 0.001), np.log10(max_dur), NBINS))
-# BINS = list(np.linspace(min_dur, max_dur, NBINS))
-# BINS = [0.04, 0.06, 0.08, 0.10, 0.13, 0.16, 0.20, 0.30, 0.45, 0.90, 1.30, 2.00]
 
 AGG_SUBJ_NAME = 'ALL'
 all_subjs = ['huk', 'klb', 'krm', 'lnk', 'lkc']
 good_subjects = {
-    # '2d': ['huk', 'lnk'],
-    # '3d': ['huk', 'lnk', 'lkc'],
     '2d': ['huk', 'klb', 'krm', 'lnk'],
     '3d': ['huk', 'klb', 'krm', 'lnk'],#, 'lkc'],
 }
 
 bad_sessions = {
     '2d': {
-        'huk': [], #[8],
-        'klb': [], #[1, 12, 15, 16, 17, 18, 19, 20],
+        'huk': [],
+        'klb': [],
         'krm': [],
         'lnk': [],
     },
     '3d': {
         'huk': [],
-        'klb': range(95), #range(42, 147), #range(106, 117),
+        'klb': range(95),
         'krm': [],
-        'lnk': [], #[5],
+        'lnk': [],
         'lkc': [],
     }
 }
@@ -75,13 +70,4 @@ bad_sessions = {
 good_cohs = {
     '2d': [0.03, 0.06, 0.12, 0.25, 0.5],#, 1],
     '3d': [0.03, 0.06, 0.12, 0.25, 0.5]#, 1],
-    # '2d': [0, 0.03, 0.06, 0.12, 0.25, 0.5, 1],
-    # '3d': [0, 0.03, 0.06, 0.12, 0.25, 0.5, 1],
 }
-# bad_cohs = {
-#     '2d': [0, 0.01],
-#     '3d': [0, 0.01, 0.1, 0.15, 0.22, 0.3, 0.4, 0.6],
-#     # '2d': [0.01],
-#     # '3d': [0.01, 0.1, 0.15, 0.22, 0.3, 0.4, 0.6],
-# }
-# assert not any([good_cohs[cond] == bad_cohs[cond] for cond in good_cohs])
