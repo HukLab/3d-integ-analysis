@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from pd_plot import plot
-from session_info import good_subjects, bad_sessions, good_cohs, nsigdots
+from session_info import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration
 
 SESSIONS_COLS = [u'index', u'subj', u'dotmode', u'number']
 TRIALS_COLS = [u'index', u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct']
@@ -56,12 +56,15 @@ def rebin(df, min_dur, max_dur, N=10):
     reassigns duration_index of each trial by rebinning with N log-spaced durations between min_dur and max_dur
     removes trials with duration above the max_dur
     """
+    df['real_duration'] = actualduration(df['duration'])
+    min_dur = actualduration(min_dur)
+    max_dur = actualduration(max_dur)
     bins = list(np.logspace(np.log10(min_dur), np.log10(max_dur), N))
     bins = bins[1:]
     bins[-1] = max_dur + 0.01
     bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [max_dur+1]) if dur < lbin)
-    df = df.loc[df['duration'] <= max_dur, :].copy()
-    df.loc[:, 'duration_index'] = df['duration'].map(bin_lkp)
+    df = df.loc[df['real_duration'] <= max_dur, :].copy()
+    df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
     # return shift_bins(df, 5, 3)
     return df
 
@@ -69,7 +72,7 @@ def default_filter_df(df):
     """
     good_subjects, bad_sessions, good_cohs
     """
-    df = rebin(df, 0.04, 1.2, 20)
+    df = rebin(df, 0.04, 1.5, 20)
     # good_subjects
     ffs = []
     for dotmode, subjs in good_subjects.iteritems():

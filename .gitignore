@@ -1,6 +1,5 @@
 .DS_Store
 *.pyc
-data.json
-papers/
 res/
 _old/
+*data.json

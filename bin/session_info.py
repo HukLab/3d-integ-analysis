@@ -38,6 +38,7 @@ import numpy as np
 NDOTS = 40
 FRATE = 60
 nframes = lambda duration: np.ceil(duration*FRATE)
+actualduration = lambda duration: nframes(duration)/FRATE
 nsigframes = lambda duration: nframes(duration) - 1 # takes two to see motion
 nsigdots = lambda coherence, duration: (NDOTS*coherence)*nsigframes(duration)
 
