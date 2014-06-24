@@ -6,7 +6,7 @@ import argparse
 
 import numpy as np
 
-from pd_io import load
+from pd_io import load, resample_by_grp
 from sample import sample_wr, bootstrap
 from session_info import DEFAULT_THETA, NBOOTS_BINNED_PS, FIT_IS_COHLESS, QUICK_FIT, THETAS_TO_FIT, AGG_SUBJ_NAME, BINS, min_dur, max_dur
 
@@ -19,6 +19,16 @@ from mle import pick_best_theta, generic_fit
 
 logging.basicConfig(level=logging.DEBUG)
 makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, '{0}-{1}-{2}.{3}'.format(subj, cond, name, ext))
+
+fit_wrapper = lambda x, y, z, w: (lambda ts, bins, coh, gs: generic_fit(x, y, z, w, QUICK_FIT, ts, bins, coh, gs))
+FIT_FCNS = {
+    'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
+    # 'drift': fit_wrapper(drift_diffuse.fit_2, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
+    'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
+    'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, THETAS_TO_FIT['sat-exp'], DEFAULT_THETA['sat-exp']),
+    'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
+    'huk': huk_fit,
+}
 
 def pickle_fit(results, bins, outfile, subj, dotmode):
     """
@@ -81,64 +91,36 @@ def as_x_y(df):
     vals = df[['duration', 'correct']].values
     return np.array([(a, int(b)) for a,b in vals])
 
-def fit_curves(df, bins, fits_to_fit, nboots):
+def fit(df, bins, fits_to_fit, nboots):
     cohs = sorted(df['coherence'].unique())
     results = {}
     results['ntrials'] = {}
     results['cohs'] = cohs
-    results['fits'] = {}
+    results['fits'] = dict((fit, {}) for fit in fits_to_fit)
     results['fits']['binned_pcor'] = {}
-
     make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)
-    fit_wrapper = lambda x,y,z,w: (lambda ts, bins, coh, gs: generic_fit(x,y,z,w, QUICK_FIT, ts, bins, coh, gs))
-    FIT_FCNS = {
-        'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
-        # 'drift': fit_wrapper(drift_diffuse.fit_2, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
-        'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
-        'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, THETAS_TO_FIT['sat-exp'], DEFAULT_THETA['sat-exp']),
-        'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
-        'huk': huk_fit,
-    }
 
     ts_all =  as_C_x_y(df)
     for key in fits_to_fit:
-        if fits_to_fit[key] and FIT_IS_COHLESS[key]:
+        if FIT_IS_COHLESS[key]:
             results['fits'][key] = bootstrap_fit_curves(ts_all, make_bootstrap_fcn(FIT_FCNS[key], 0), nboots)
-        elif fits_to_fit[key]:
-            results['fits'][key] = {}
 
     for coh, dfc in df.groupby('coherence'):
         ts_cur_coh = as_x_y(dfc)
         logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(ts_cur_coh)))
-        for key in fits_to_fit:
-            if fits_to_fit[key] and not FIT_IS_COHLESS[key]:
-                results['fits'][key][coh] = bootstrap_fit_curves(ts_cur_coh, make_bootstrap_fcn(FIT_FCNS[key], coh), nboots)
-        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins, NBOOTS_BINNED_PS, include_se=True)
         results['ntrials'][coh] = len(ts_cur_coh)
+        results['fits']['binned_pcor'][coh] = binned_ps(ts_cur_coh, bins, NBOOTS_BINNED_PS, include_se=True)
+        for key in fits_to_fit:
+            if not FIT_IS_COHLESS[key]:
+                results['fits'][key][coh] = bootstrap_fit_curves(ts_cur_coh, make_bootstrap_fcn(FIT_FCNS[key], coh), nboots)
     return results
 
-def sample_trials_by_session(df, dotmode, mult=5):
-    """
-    assumes filtering already done by dotmode
-    """
-    raise Exception("Not yet implemented with pd_io.")
-    # groups = group_trials(trials, subj_grouper, False)
-    # n = min(len(ts) for ts in groups.values())
-    # ts_all = []
-    # for subj, ts in groups.iteritems():
-    #     ts_cur = sample_wr(ts, mult*n)
-    #     ts_all.extend(ts_cur)
-    # msg = 'Created {0} trials for {1} dots (sampling with replacement per subject)'.format(len(ts_all), dotmode)
-    # logging.info(msg)
-    # return ts_all
-    return df
-
-def fit(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample):
+def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False):
     if resample:
-        df = sample_trials_by_session(df, dotmode)
+        df = resample_by_grp(df)
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(df), subj, dotmode)
     logging.info(msg)
-    results = fit_curves(df, bins, fits_to_fit, nboots)
+    results = fit(df, bins, fits_to_fit, nboots)
     outfile = makefn(outdir, subj, dotmode, 'fit', 'pickle')
     pickle_fit(results, bins, outfile, subj, dotmode)
 
@@ -152,13 +134,13 @@ def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, bins=BINS):
     outdir = parse_outdir(outdir)
     for dotmode, dfc in df.groupby('dotmode'):
         if is_agg_subj:
-            fit(dfc, AGG_SUBJ_NAME, dotmode, fits_to_fit, nboots, bins, outdir, True)
+            fit_and_write(dfc, AGG_SUBJ_NAME, dotmode, fits_to_fit, nboots, bins, outdir, resample=True)
         else:
             for subj, dfc2 in dfc.groupby('subj'):
-                fit(dfc2, subj, dotmode, fits_to_fit, nboots, bins, outdir, False)
+                fit_and_write(dfc2, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False)
 
 if __name__ == '__main__':
-    ALL_FITS = FIT_IS_COHLESS.keys()
+    ALL_FITS = FIT_FCNS.keys()
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', "--subj", type=str, help="Restrict fit to a single subject.")
     parser.add_argument('-d', "--dotmode", type=str, help="2D or 3D or (default:) both.")
@@ -167,9 +149,6 @@ if __name__ == '__main__':
     parser.add_argument('-n', "--nboots", default=0, type=int, help="The number of bootstraps of fits")
     parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
     args = parser.parse_args()
-
-    def fits_fit(fits, all_fits):
-        return dict((fit, fit in fits) for fit in all_fits)
     
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
-    main(ps, args.is_agg_subj, fits_fit(args.fits, ALL_FITS), args.nboots, args.outdir)
+    main(ps, args.is_agg_subj, args.fits, args.nboots, args.outdir)

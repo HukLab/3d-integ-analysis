@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from pd_plot import plot
+from sample import rand_inds
 from session_info import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS
 
 SESSIONS_COLS = [u'index', u'subj', u'dotmode', u'number']
@@ -65,8 +66,16 @@ def rebin(df, dur0, dur1, N=10):
     bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
-    # return shift_bins(df, 5, 3)
     return df
+
+def resample_by_grp(df, mult, grp=('dotmode', 'subj')):
+    """
+    resamples rows of each group in df
+    """
+    dg = df.groupby(grp, as_index=False)
+    ntrials = dg['trial_index'].agg(len)
+    N = max(ntrials.min() * mult, ntrials.max())
+    return pd.concat([dfc.loc[dfc.index[rand_inds(dfc, N)]] for grp, dfc in dg]).copy()
 
 def default_filter_df(df):
     """

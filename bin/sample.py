@@ -1,6 +1,4 @@
-import random
-
-import numpy as np
+dimport numpy as np
 
 def rand_inds(population, k):
     if not hasattr(population, 'shape'):
