@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from tools import color_list
 from sample import bootstrap_se
 from fitCurveVsDurByCoh import makefn
-from session_info import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
+from settings import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
 
 from twin_limb import twin_limb
 from quick_1974 import quick_1974

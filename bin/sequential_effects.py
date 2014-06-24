@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from pd_io import load
 from sample import bootstrap, bootstrap_se
-from session_info import bad_sessions, all_subjs
+from settings import bad_sessions, all_subjs
 
 def plot(ress, subj, outfile):
     width = 0.5

@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from scipy.optimize import minimize
 
-from session_info import BINS, NBOOTS_BINNED_PS
+from settings import BINS, NBOOTS_BINNED_PS
 from saturating_exponential import saturating_exp
 from sample import bootstrap, bootstrap_se
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from pd_io import load
 from sample import bootstrap
-from session_info import nsigdots, COLOR_MAP
+from settings import nsigdots, COLOR_MAP
 from weibull import weibull, inv_weibull, solve
 
 def bootstrap_solve(xs0, ys0, unfold, nboots, thresh_val):

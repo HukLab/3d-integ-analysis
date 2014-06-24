@@ -6,7 +6,7 @@ import pandas as pd
 import scipy.io as sio
 
 from trial import Trial, Session
-from session_info import all_subjs
+from settings import all_subjs
 from pd_io import SESSIONS_COLS, TRIALS_COLS
 
 def load_session(mat, session_index):

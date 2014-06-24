@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pd_io import load
 from tools import color_list
 import saturating_exponential
-from session_info import DEFAULT_THETA, min_dur, max_dur
+from settings import DEFAULT_THETA, min_dur, max_dur
 
 def fit_curve(df, A=None, T=None):
     B = DEFAULT_THETA['sat-exp']['B']

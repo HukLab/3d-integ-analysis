@@ -8,7 +8,7 @@ import numpy as np
 
 from pd_io import load, resample_by_grp
 from sample import sample_wr, bootstrap
-from session_info import DEFAULT_THETA, NBOOTS_BINNED_PS, FIT_IS_COHLESS, QUICK_FIT, THETAS_TO_FIT, AGG_SUBJ_NAME, BINS, min_dur, max_dur
+from settings import DEFAULT_THETA, NBOOTS_BINNED_PS, FIT_IS_COHLESS, QUICK_FIT, THETAS_TO_FIT, AGG_SUBJ_NAME, BINS, min_dur, max_dur
 
 import twin_limb
 import quick_1974

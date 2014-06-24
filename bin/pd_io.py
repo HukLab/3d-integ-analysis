@@ -7,7 +7,7 @@ import pandas as pd
 
 from pcor_mesh_plot import plot
 from sample import rand_inds
-from session_info import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS
+from settings import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS
 
 SESSIONS_COLS = [u'index', u'subj', u'dotmode', u'number']
 TRIALS_COLS = [u'index', u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct']
