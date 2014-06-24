@@ -2,7 +2,7 @@ import os.path
 import argparse
 import subprocess
 
-BINDIR = 'bin'
+BINDIR = '.'
 SUBJS = ['lnk', 'huk', 'klb', 'krm']
 NBOOTS = 20
 
