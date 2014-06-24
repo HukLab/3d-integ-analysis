@@ -5,7 +5,7 @@ from operator import and_, or_ # bitwise-and, e.g. a & b; bitwise-or, e.g. a | b
 import numpy as np
 import pandas as pd
 
-from pd_plot import plot
+from pcor_mesh_plot import plot
 from sample import rand_inds
 from session_info import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS
 

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from pd_io import load, interpret_filters, filter_df, default_filter_df, plot
-from pd_plot import plot_inner
+from pcor_mesh_plot import plot_inner
 from plotCurveVsDurByCoh import load_pickle
 from drift_diffuse import drift_diffusion
 from saturating_exponential import saturating_exp
