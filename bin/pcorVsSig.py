@@ -9,7 +9,7 @@ from settings import nsigdots, COLOR_MAP
 from weibull import weibull, inv_weibull, solve
 
 def bootstrap_solve(xs0, ys0, unfold, nboots, thresh_val):
-    guess = (1500, 7) if unfold else (85, 0.75)
+    guess = (1500, 7, 0.01, 0.99) if unfold else (85, 0.75, 0.01, 0.99)
     zss = bootstrap(zip(xs0, ys0), nboots)
     thetas, threshes = [], []
     for i in xrange(nboots+1):

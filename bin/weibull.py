@@ -44,15 +44,32 @@ def weibull_mle(theta, xs, ys, unfold=False):
         logL = np.sum(ys*np.log(yh) + (1-ys)*np.log(1-yh))
     return -logL
 
+def weibull_mle_2(data, fcn, thetas, fcn_kwargs):
+    """
+    data is array of [(x0, y0), (x1, y1), ...], where each yi in {0, 1}
+    fcn if function, and will be applied to each xi
+    thetas is tuple, a set of parameters passed to fcn along with each xi
+
+    calculates the sum of the log-likelihood of data
+        = sum_i fcn(xi, *thetas)^(yi) * (1 - fcn(xi, *thetas))^(1-yi)
+    """
+    likelihood = lambda row: fcn(row[0], thetas, *fcn_kwargs) if row[1] else 1-fcn(row[0], thetas, *fcn_kwargs)
+    log_likeli = lambda row: np.log(likelihood(row))
+    val = sum(map(log_likeli, data))
+    return val
+
 def solve(xs, ys, unfold=False, guess=(0.3, 1.0), ntries=20, quick=True):
-    neg_log_likelihood_fcn = lambda theta: weibull_mle(theta, xs, ys, unfold)
+    guess = np.array(guess)
+    APPROX_ZERO, APPROX_ONE = 0.00001, 0.99999
+    bounds = [(APPROX_ZERO, None), (APPROX_ZERO, None)] + [(APPROX_ZERO, APPROX_ONE)] * (len(guess) - 2)
+    pf = lambda th, d=zip(xs, ys): -weibull_mle_2(d, weibull, th, {'unfold': unfold})
+
     sol = None
     ymin = 100000
     for i in xrange(ntries):
         if i > 0:
-            guess = [g + i/10.0 for g in guess]
-        bounds = [(0, None), (0, None)] + ([(0.0, 1.0)] * (len(guess) - 2))
-        soln = minimize(neg_log_likelihood_fcn, guess, method='TNC', bounds=bounds, constraints=[])
+            guess = guess*np.random.uniform(0.75, 0.95)
+        soln = minimize(pf, guess, method='L-BFGS-B', bounds=bounds, constraints=[])
         if soln['success']:
             theta_hat = soln['x']
             if not quick and soln['fun'] < ymin:
