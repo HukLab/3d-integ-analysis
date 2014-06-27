@@ -36,15 +36,7 @@ def inv_weibull(theta, y, unfold=False):
     a, b, minV, maxV = params(theta, unfold)
     return a * pow(np.log((maxV-minV)/(maxV-y)), 1.0/b)
 
-def weibull_mle(theta, xs, ys, unfold=False):
-    yh = weibull(xs, theta, unfold)
-    logL = np.sum(ys*np.log(yh) + (1-ys)*np.log(1-yh))
-    if np.isnan(logL):
-        yh = yh*0.99 + 0.005
-        logL = np.sum(ys*np.log(yh) + (1-ys)*np.log(1-yh))
-    return -logL
-
-def weibull_mle_2(data, fcn, thetas, fcn_kwargs):
+def log_likelihood(data, fcn, thetas, fcn_kwargs):
     """
     data is array of [(x0, y0), (x1, y1), ...], where each yi in {0, 1}
     fcn if function, and will be applied to each xi
@@ -56,13 +48,17 @@ def weibull_mle_2(data, fcn, thetas, fcn_kwargs):
     likelihood = lambda row: fcn(row[0], thetas, *fcn_kwargs) if row[1] else 1-fcn(row[0], thetas, *fcn_kwargs)
     log_likeli = lambda row: np.log(likelihood(row))
     val = sum(map(log_likeli, data))
+    # if np.isnan(val):
+    #     yp = lambda v: v*0.99 + 0.005
+    #     likelihood = lambda row: fcn(row[0], thetas, *fcn_kwargs)**yp(row[1]) if row[1] else (1-fcn(row[0], thetas, *fcn_kwargs))**(1-yp(row[1]))
+    #     val = sum(map(log_likeli, data))
     return val
 
 def solve(xs, ys, unfold=False, guess=(0.3, 1.0), ntries=20, quick=True):
     guess = np.array(guess)
     APPROX_ZERO, APPROX_ONE = 0.00001, 0.99999
     bounds = [(APPROX_ZERO, None), (APPROX_ZERO, None)] + [(APPROX_ZERO, APPROX_ONE)] * (len(guess) - 2)
-    pf = lambda th, d=zip(xs, ys): -weibull_mle_2(d, weibull, th, {'unfold': unfold})
+    pf = lambda th, d=zip(xs, ys): -log_likelihood(d, weibull, th, {'unfold': unfold})
 
     sol = None
     ymin = 100000
