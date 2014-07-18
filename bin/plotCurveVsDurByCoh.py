@@ -15,7 +15,7 @@ from settings import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, CO
 from twin_limb import twin_limb
 from quick_1974 import quick_1974
 from saturating_exponential import saturating_exp
-from drift_diffuse import drift_diffusion, drift_diffusion_2
+from drift_diffuse import drift_diffusion, drift_diffusion_1, drift_diffusion_1b, drift_diffusion_2, drift_diffusion_2b
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -57,11 +57,13 @@ def pcor_curves(results, cohs, bins, subj, cond, outfile):
     xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
     yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
     yfB = lambda x, th: [twin_limb(x, th['X0'], th['S0'], th['P']) for x in xs]
+    yf1 = lambda xs, th: [drift_diffusion_1((C, x), th['K'], th['L'], th['X0']) for (C, x) in xs]
+    yf1b = lambda xs, th: [drift_diffusion_2b(x, th['K'], th['L'], th['X0']) for x in xs]
     yf2 = lambda xs, th: [drift_diffusion((C, x), th['K'], th['X0']) for (C, x) in xs]
     yf22 = lambda xs, th: [drift_diffusion_2(x, th['K'], th['X0']) for x in xs]
     yf2B = lambda xs, th: [quick_1974((C, x), th['A'], th['B']) for (C, x) in xs]
     # FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf22, 'quick_1974': yf2B}
-    FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'quick_1974': yf2B}
+    FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'drift-diff': yf1, 'quick_1974': yf2B}
 
     nrows = 3
     ncols = int((len(cohs)-0.5)/nrows)+1
@@ -218,11 +220,11 @@ def main(conds, subj, indir, outdir):
             pcor_curves(res['fits'], res['cohs'], res['bins'], subj, cond, outfile)
             results_both[cond] = res['fits']
         if res:
-            param_curve_both_conds(results_both, res['cohs'], ['drift'], makefn(OUTDIR, subj, 'cond', 'K'), 'K', 'K per coherence', 'K*coh', 'png')
-            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], makefn(OUTDIR, subj, 'cond', 't0'), 'X0', 'Elbow time per coherence', 't0', 'png')
+            param_curve_both_conds(results_both, res['cohs'], ['drift'], makefn(OUTDIR, subj, 'cond', 'K', 'png'), 'K', 'K per coherence', 'K*coh')
+            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], makefn(OUTDIR, subj, 'cond', 't0', 'png'), 'X0', 'Elbow time per coherence', 't0')
             methods = ['sat-exp', 'huk']
-            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'A'), 'A', 'Saturation % correct per coherence', 'A', 'png')
-            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'tau'), 'T', 'Time constants per coherence', 'tau (ms)', 'png')
+            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'A', 'png'), 'A', 'Saturation % correct per coherence', 'A')
+            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'tau', 'png'), 'T', 'Time constants per coherence', 'tau (ms)')
 
 
 if __name__ == '__main__':

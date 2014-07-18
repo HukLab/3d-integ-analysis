@@ -8,9 +8,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from scatter_plots import plot_by_key, plot_info
+from settings import DEFAULT_THETA
 from tools import color_list
-
-DEFAULT_THETA = {'A': 1.0, 'B': 0.5, 'T': 0.001}
 
 def load_inner(infile):
     return pickle.load(open(infile))
@@ -27,14 +26,13 @@ def load(indir):
         fits[(subj, cond)] = load_inner(ind)
     return fits
 
-def prep(fits):
+def prep(fits, fit):
     rows = []
-    for (subj, cond), fit in fits.iteritems():
+    for (subj, cond), res in fits.iteritems():
         base_row = {'subj': subj, 'dotmode': cond}
-        vals = [dict({'coh': coh}.items() + ts[0].items()) for coh, ts in fit['fits']['sat-exp'].iteritems()]
+        vals = [dict({'coh': coh}.items() + ts[0].items()) for coh, ts in res['fits'][fit].iteritems()]
         rows.extend([dict(base_row.items() + val.items()) for val in vals])
     df = pd.DataFrame(rows)
-    # df = df.set_index(['subj', 'coh'])
     return df
 
 def plot_all_by_key(df, key):
@@ -51,27 +49,23 @@ def plot_all_by_key(df, key):
             y2 = ymax
     mean_x, mean_y = df.groupby('dotmode').agg(np.mean)[key]
     plt.plot(mean_x, mean_y, label='mean', marker='o', linestyle='', color='red')
-    plt.annotate('average tau = {0:.2f}, {1:.2f}'.format(mean_x, mean_y), xy=(mean_x, mean_y), xytext=(mean_x*1.07, mean_y))
+    plt.annotate('average {2} = {0:.2f}, {1:.2f}'.format(mean_x, mean_y, key), xy=(mean_x, mean_y), xytext=(mean_x*1.07, mean_y))
     plot_info(key, (y1, y2), True, 'upper left')
 
-def main(indir, key):
+def main(indir, fit, key):
     fits = load(indir)
-    df = prep(fits)
-    df = df[df[key] <= 200]
+    df = prep(fits, fit)
+    # df = df[df[key] <= 200]
     # df = df[df['coh'] != 0.03]
-    plot_all_by_key(df, 'T')
+    plot_all_by_key(df, key)
     # plt.xlim([None, 200])
     # plt.ylim([None, 200])
-    plt.show()
-    return
-    plot_all_by_key(df, 'A')
-    plt.xlim([0.4, 1.1])
-    plt.ylim([0.4, 1.1])
     plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', "--indir", required=True, type=str)
-    parser.add_argument('-k', "--key", default='T', choices=DEFAULT_THETA.keys(), type=str)
+    parser.add_argument('-f', "--fit", required=True, choices=DEFAULT_THETA.keys(), type=str)
+    parser.add_argument('-k', "--key", required=True, type=str)
     args = parser.parse_args()
-    main(args.indir, args.key)
+    main(args.indir, args.fit, args.key)

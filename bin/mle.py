@@ -192,7 +192,7 @@ def log_likelihood_factory(data, fcn, thetas, theta_key_order):
     keys_left = [key for key in theta_key_order if thetas_lookup[key] is None]
     return lambda theta: -log_likelihood(data, fcn, add_dicts(thetas_preset, make_dict(keys_left, theta)))
 
-def fit_mle(data, inner_likelihood_fcn, thetas, theta_key_order, guesses_lookup, bounds_lookup, constraints, quick=False, guesses=None, method='TNC'):
+def fit_mle(data, inner_likelihood_fcn, thetas, theta_key_order, guesses_lookup, bounds_lookup, constraints, quick=False, guesses=None, method='SLSQP'):
     if guesses is None:
         guesses = make_guesses(thetas, theta_key_order, guesses_lookup)
     bounds = make_bounds(thetas, theta_key_order, bounds_lookup)

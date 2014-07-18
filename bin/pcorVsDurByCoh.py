@@ -1,4 +1,6 @@
+import os
 import argparse
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -30,25 +32,24 @@ def plot_inner(ax, df):
         xsp = [durmap[i]*1000 for i in isp]
         ax.plot(xsp, ysp, color=colmap[coh], label="%0.2f" % coh, marker='o', linestyle='-')
 
-def plot_inner_across_cohs(ax, df, dotmode, fit=True):
+DEFAULT_FITS = {'ALL': {'2d': [0.84859761, 79.69870077], '3d': [0.74840758, 144.49747108]}}
+def plot_inner_across_cohs(ax, df, dotmode, fit_default=DEFAULT_FITS['ALL']):
     color='g' if dotmode == '2d' else 'r'
     durmap = dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
     isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
     xsp = [durmap[i]*1000 for i in isp]
     ax.plot(xsp, ysp, color=color, label=dotmode, marker='o', linestyle='')
-    if fit:
-        if dotmode == '2d':
-            A, T = 0.8691109, 63.54061409
-        elif dotmode == '3d': # 0.84060266  496.6706102
-            A, T = 0.7330778, 135.2477195
-        xs, ys, th = fit_curve(df)#, A, T)
-        th = list(th)
-        th[-1] += 39 # for delay
-        if xs is not None:
-            ax.plot(xs, ys, color=color)
-            plt.axvline(th[-1], color=color, linestyle='--')
-            plt.text(th[-1] + 5, 0.5 if dotmode == '2d' else 0.45, 'tau={0:.2f}'.format(th[-1]), color=color)
-            # plt.axhline(th[0], color=color, linestyle='dotted')
+    # A, T = fit_default[dotmode]
+    A, T = None, None
+    xs, ys, th = fit_curve(df, A, T)
+    th = list(th)
+    th[-1] += 30 # for delay
+    if xs is not None:
+        ax.plot(xs, ys, color=color)
+        plt.axvline(th[-1], color=color, linestyle='--')
+        plt.text(th[-1] + 5, 0.5 if dotmode == '2d' else 0.45, 'tau={0:.2f}'.format(th[-1]), color=color)
+        plt.text(max(xsp) - 120, th[0] - 0.03, 'A={0:.2f}'.format(th[0]), color=color)
+        # plt.axhline(th[0], color=color, linestyle='dotted')
 
 def plot_info(ax, title):
     plt.title('{0}: % correct vs. duration'.format(title))

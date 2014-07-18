@@ -73,7 +73,7 @@ def resample_by_grp(df, mult, grp=('dotmode', 'subj')):
     resamples rows of each group in df
     """
     dg = df.groupby(grp, as_index=False)
-    ntrials = dg['trial_index'].agg(len)
+    ntrials = dg.agg(len)['trial_index']
     N = max(ntrials.min() * mult, ntrials.max())
     return pd.concat([dfc.loc[dfc.index[rand_inds(dfc, N)]] for grp, dfc in dg]).copy()
 

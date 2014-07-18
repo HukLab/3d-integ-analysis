@@ -40,6 +40,7 @@ def plot_weibull_with_data(dfc, dotmode, theta, thresh, color, dur, ax, show_for
     ax.plot(xsc, weibull(xsc, theta), color=color, linestyle='-')
 
 def solve_one_duration(xs, ys, di, thresh_val):
+    # theta = [0.3, 0.8, 0.5, 0.85] # solve(xs, ys)
     theta = solve(xs, ys)
     thresh = inv_weibull(theta, thresh_val) if theta is not None else None
     if theta is None:
@@ -256,7 +257,7 @@ def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, sav
     if plot_thresh:
         plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label)
 
-def plot(df, dotmode, savefig, outdir):
+def plot(df, dotmode, show_for_each_dotmode, savefig, outdir):
     durinds = sorted(df[DUR_COL].unique())
     colmap = make_colmap(durinds)
     durmap = make_durmap(df)
@@ -264,29 +265,47 @@ def plot(df, dotmode, savefig, outdir):
     subjs = df['subj'].unique()
     outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
 
-    fig = plt.figure()
+    if show_for_each_dotmode:
+        fig = plt.figure()
     ax = plt.subplot(111)
+    if not show_for_each_dotmode:
+        durinds = [durinds[1] if dotmode == '3d' else durinds[-2]]
     for di in durinds:
-        dfc = df[df[DUR_COL] == di]
+        if show_for_each_dotmode:
+            dfc = df[df[DUR_COL] == di]
+        else:
+            dfc = df
         xsp, ysp = zip(*dfc.groupby('coherence').agg(np.mean)['correct'].reset_index().values)
-        ax.plot(xsp, ysp, color=colmap[di], label="%0.2f" % durmap[di], marker='o', linestyle='-')
-    plt.title('{0}: % correct vs. coherence, by duration'.format(dotmode))
+        ax.plot(xsp, ysp, color=colmap[di], label="%0.2f" % durmap[di] if show_for_each_dotmode else dotmode, marker='o', linestyle='-')
+    plt.title('{0}{1}: % correct vs. coherence, by duration'.format(dotmode if show_for_each_dotmode else '', ', ' + subjs[0].upper() if len(subjs) == 1 else ''))
     plt.xlabel('coherence')
+    plt.xscale('log')
     plt.ylabel('% correct')
     # plt.xlim([0.0, 1.05])
     plt.ylim([0.4, 1.05])
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    if not show_for_each_dotmode:
+        return
     if savefig:
         plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode=dotmode))
     else:
         plt.show()
 
-def main(args, savefig, outdir):
+def main(args, show_for_each_dotmode, savefig, outdir):
     df = load(args)
+    if not show_for_each_dotmode:
+        fig = plt.figure()
     for dotmode, df_dotmode in df.groupby('dotmode'):
-        plot(df_dotmode, dotmode, savefig, outdir)
+        plot(df_dotmode, dotmode, show_for_each_dotmode, savefig, outdir)
+    if not show_for_each_dotmode:
+        if savefig:
+            subjs = df['subj'].unique()
+            outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
+            plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode='2d3d'))
+        else:
+            plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -305,4 +324,4 @@ if __name__ == '__main__':
     if args.thresh:
         thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val, args.savefig, args.outdir)
     else:
-        main(ps, args.savefig, args.outdir)
+        main(ps, not args.join_dotmode, args.savefig, args.outdir)

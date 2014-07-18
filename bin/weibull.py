@@ -54,7 +54,7 @@ def log_likelihood(data, fcn, thetas, fcn_kwargs):
     #     val = sum(map(log_likeli, data))
     return val
 
-def solve(xs, ys, unfold=False, guess=(0.3, 1.0), ntries=20, quick=True):
+def solve(xs, ys, unfold=False, guess=(0.5, 0.7, 0.5, 0.85), ntries=20, quick=True):
     guess = np.array(guess)
     APPROX_ZERO, APPROX_ONE = 0.00001, 0.99999
     bounds = [(APPROX_ZERO, None), (APPROX_ZERO, None)] + [(APPROX_ZERO, APPROX_ONE)] * (len(guess) - 2)
@@ -62,14 +62,17 @@ def solve(xs, ys, unfold=False, guess=(0.3, 1.0), ntries=20, quick=True):
 
     sol = None
     ymin = 100000
+    method = 'L-BFGS-B' # 'SLSQP' 
     for i in xrange(ntries):
         if i > 0:
-            guess = guess*np.random.uniform(0.75, 0.95)
-        soln = minimize(pf, guess, method='L-BFGS-B', bounds=bounds, constraints=[])
+            guess = guess*np.random.uniform(0.95, 1.05)
+        soln = minimize(pf, guess, method=method, bounds=bounds, constraints=[])
         if soln['success']:
             theta_hat = soln['x']
             if not quick and soln['fun'] < ymin:
                 sol = theta_hat
             else:
                 return theta_hat
+        else:
+            print soln
     return sol

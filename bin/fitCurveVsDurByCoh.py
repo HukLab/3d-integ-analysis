@@ -20,16 +20,6 @@ from mle import pick_best_theta, generic_fit
 logging.basicConfig(level=logging.DEBUG)
 makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, '{0}-{1}-{2}.{3}'.format(subj, cond, name, ext))
 
-fit_wrapper = lambda x, y, z, w: (lambda ts, bins, coh, gs: generic_fit(x, y, z, w, QUICK_FIT, ts, bins, coh, gs))
-FIT_FCNS = {
-    'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
-    # 'drift': fit_wrapper(drift_diffuse.fit_2, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
-    'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
-    'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, THETAS_TO_FIT['sat-exp'], DEFAULT_THETA['sat-exp']),
-    'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
-    'huk': huk_fit,
-}
-
 def pickle_fit(results, bins, outfile, subj, dotmode):
     """
     n.b. json output is just for human-readability; it's not invertible since numeric keys become str
@@ -83,6 +73,16 @@ def huk_fit(ts, bins, coh, guesses=None):
     # logging.info(msg)
     return {'A': A, 'B': B, 'T': th[0]}, th, fit_found
 
+fit_wrapper = lambda x, y, z, w: (lambda ts, bins, coh, gs: generic_fit(x, y, z, w, QUICK_FIT, ts, bins, coh, gs))
+FIT_FCNS = {
+    'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
+    'drift-diff': fit_wrapper(drift_diffuse.fit_1, drift_diffuse.THETA_ORDER_1, THETAS_TO_FIT['drift-diff'], DEFAULT_THETA['drift-diff']),
+    'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
+    'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, THETAS_TO_FIT['sat-exp'], DEFAULT_THETA['sat-exp']),
+    'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
+    'huk': huk_fit,
+}
+
 def as_C_x_y(df):
     vals = df[['coherence', 'duration', 'correct']].values
     return np.array([([a, b], int(c)) for a,b,c in vals])
@@ -117,7 +117,7 @@ def fit(df, bins, fits_to_fit, nboots):
 
 def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False):
     if resample:
-        df = resample_by_grp(df)
+        df = resample_by_grp(df, 5)
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(df), subj, dotmode)
     logging.info(msg)
     results = fit(df, bins, fits_to_fit, nboots)
