@@ -216,15 +216,15 @@ def main(conds, subj, indir, outdir):
                 msg = "could not load {0} {1}".format(subj, cond)
                 logging.error(msg)
                 continue
-            outfile = makefn(OUTDIR, subj, cond, 'fit', 'png')
+            outfile = makefn(OUTDIR, subj, cond, '', 'png')
             pcor_curves(res['fits'], res['cohs'], res['bins'], subj, cond, outfile)
             results_both[cond] = res['fits']
         if res:
-            param_curve_both_conds(results_both, res['cohs'], ['drift'], makefn(OUTDIR, subj, 'cond', 'K', 'png'), 'K', 'K per coherence', 'K*coh')
-            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], makefn(OUTDIR, subj, 'cond', 't0', 'png'), 'X0', 'Elbow time per coherence', 't0')
+            param_curve_both_conds(results_both, res['cohs'], ['drift'], makefn(OUTDIR, subj, 'cond', '-K', 'png'), 'K', 'K per coherence', 'K*coh')
+            param_curve_both_conds(results_both, res['cohs'], ['twin-limb'], makefn(OUTDIR, subj, 'cond', '-t0', 'png'), 'X0', 'Elbow time per coherence', 't0')
             methods = ['sat-exp', 'huk']
-            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'A', 'png'), 'A', 'Saturation % correct per coherence', 'A')
-            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', 'tau', 'png'), 'T', 'Time constants per coherence', 'tau (ms)')
+            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', '-A', 'png'), 'A', 'Saturation % correct per coherence', 'A')
+            param_curve_both_conds(results_both, res['cohs'], methods, makefn(OUTDIR, subj, 'cond', '-tau', 'png'), 'T', 'Time constants per coherence', 'tau (ms)')
 
 
 if __name__ == '__main__':

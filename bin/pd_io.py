@@ -7,7 +7,7 @@ import pandas as pd
 
 from pcor_mesh_plot import plot
 from sample import rand_inds
-from settings import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS
+from settings import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS, min_dur_longDur, max_dur_longDur, NBINS_longDur, nsigframes
 
 SESSIONS_COLS = [u'index', u'subj', u'dotmode', u'number']
 TRIALS_COLS = [u'index', u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct']
@@ -18,6 +18,8 @@ CURDIR = os.path.dirname(os.path.abspath(__file__))
 BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
 SESSIONS_INFILE = os.path.join(BASEDIR, 'data', 'sessions.csv')
 TRIALS_INFILE = os.path.join(BASEDIR, 'data', 'trials.csv')
+SESSIONS_INFILE_2 = os.path.join(BASEDIR, 'data', 'sessions-longDur.csv')
+TRIALS_INFILE_2 = os.path.join(BASEDIR, 'data', 'trials-longDur.csv')
 
 def load_df(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
     df1 = pd.read_csv(sessions_infile, index_col='index')
@@ -52,18 +54,41 @@ def shift_bins(df, durbin_3d=2, durbin_floor=1):
     df = df[df['duration_index'] >= durbin_floor]
     return df
 
-def rebin(df, dur0, dur1, N=10):
+def rebin(df, isLongDur, N=10):
     """
     reassigns duration_index of each trial by rebinning with N log-spaced durations between dur0 and dur1
     removes trials with duration above the dur1
     """
+    N += 1
     df['real_duration'] = actualduration(df['duration'])
+    if isLongDur:
+        dur0 = min_dur_longDur
+        dur1 = max_dur_longDur
+    else:
+        dur0 = min_dur
+        dur1 = max_dur
     dur0 = actualduration(dur0)
     dur1 = actualduration(dur1)
-    bins = list(np.logspace(np.log10(dur0), np.log10(dur1), N))
+    if isLongDur:
+        bins = list(np.linspace(dur0, dur1, N))
+    else:
+        bins = list(np.logspace(np.log10(dur0), np.log10(dur1), N))
     bins = bins[1:]
     bins[-1] = dur1 + 0.01
-    bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
+    
+    if True:
+        """
+        as per leor: first 5 frames should be their own bin; after that, binned as per normal
+        so need to combine nf and bin_lkp somehow
+        """
+        max_nframe_as_bin = 5
+        nf = sorted(nsigframes(df['real_duration']).unique().tolist())
+        bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
+
+        bins1 = df['real_duration'].unique().tolist()[:nf.index(max_nframe_as_bin+1)]
+        bins = bins1 + [b for b in bins if b > bins1[-1]]
+        bins = bins[1:]
+
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
     return df
@@ -81,7 +106,6 @@ def default_filter_df(df):
     """
     good_subjects, bad_sessions, good_cohs
     """
-    df = rebin(df, min_dur, max_dur, NBINS)
     # good_subjects
     ffs = []
     for dotmode, subjs in good_subjects.iteritems():
@@ -106,14 +130,18 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(args=None, filters=None):
-    df = load_df()
+def load(args=None, filters=None, isLongDur=False):
+    if isLongDur:
+        df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
+    else:
+        df = load_df()
+    df = rebin(df, isLongDur, NBINS_longDur if isLongDur else NBINS)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(args))
-    return default_filter_df(df)
+    return default_filter_df(df) if not isLongDur else df
 
-def main(args):
-    df = load(args)
+def main(args, isLongDur=False):
+    df = load(args, None, isLongDur)
     print df.head()
     print df.shape
     plot(df)

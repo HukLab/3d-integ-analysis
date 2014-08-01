@@ -18,7 +18,7 @@ from huk_tau_e import binned_ps, huk_tau_e
 from mle import pick_best_theta, generic_fit
 
 logging.basicConfig(level=logging.DEBUG)
-makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, '{0}-{1}-{2}.{3}'.format(subj, cond, name, ext))
+makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, 'fitCurveVsDurByCoh-{0}-{1}{2}.{3}'.format(subj, cond, name, ext))
 
 def pickle_fit(results, bins, outfile, subj, dotmode):
     """
@@ -121,10 +121,15 @@ def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(df), subj, dotmode)
     logging.info(msg)
     results = fit(df, bins, fits_to_fit, nboots)
-    outfile = makefn(outdir, subj, dotmode, 'fit', 'pickle')
+    outfile = makefn(outdir, subj, dotmode, '', 'pickle')
     pickle_fit(results, bins, outfile, subj, dotmode)
 
 def parse_outdir(outdir):
+    """
+    if outdir is just a folder name, assume it belongs in $BASEDIR/res
+    """
+    if '/' in outdir:
+        return os.path.abspath(outdir)
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     return os.path.join(BASEDIR, 'res', outdir)

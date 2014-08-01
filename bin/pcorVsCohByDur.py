@@ -1,4 +1,5 @@
-import os
+import json
+import os.path
 import operator
 import itertools
 
@@ -11,7 +12,7 @@ from scipy.optimize import minimize
 
 from sample import bootstrap
 from tools import color_list
-from pd_io import load, default_filter_df, make_gt_filter
+from pd_io import load, make_gt_filter
 from weibull import weibull, inv_weibull, solve
 
 DUR_COL = 'duration_index' # 'real_duration'
@@ -36,17 +37,16 @@ def plot_weibull_with_data(dfc, dotmode, theta, thresh, color, dur, ax, show_for
     xsc = np.linspace(min(xsp), max(xsp))
     if not show_for_each_dotmode:
         plt.axvline(thresh, color=color, linestyle='--')
-        plt.text(thresh + 0.01, 0.5 if dotmode == '2d' else 0.45, 'threshold={0}%'.format(int(thresh*100)), color=color)
-    ax.plot(xsc, weibull(xsc, theta), color=color, linestyle='-')
+        if not is_nan_or_inf(thresh).any():
+            plt.text(thresh + 0.01, 0.5 if dotmode == '2d' else 0.45, 'threshold={0}%'.format(int(thresh*100)), color=color)
+    ys = weibull(xsc, theta)
+    ax.plot(xsc, ys, color=color, linestyle='-')
+    obj = {'binned': {'xs': xsp, 'ys': ysp}, 'fit': {'xs': xsc, 'ys': ys, 'theta': theta, 'thresh': thresh}}
+    return obj
 
 def solve_one_duration(xs, ys, di, thresh_val):
-    # theta = [0.3, 0.8, 0.5, 0.85] # solve(xs, ys)
     theta = solve(xs, ys)
     thresh = inv_weibull(theta, thresh_val) if theta is not None else None
-    if theta is None:
-        pass # print 'ERROR   (di={0})'.format(di)
-    else:
-        pass # print 'SUCCESS (di={0}): {1}, {2}'.format(di, theta, np.log(thresh))
     return theta, thresh
 
 def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmode):
@@ -54,11 +54,14 @@ def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmo
     colmap = make_colmap(durinds)
     durmap = make_durmap(df)
     threshes, thetas = dict(zip(durinds, [list() for _ in xrange(len(durinds))])), dict(zip(durinds, [list() for _ in xrange(len(durinds))]))
+    objs = {}
+    di_key_for_json = lambda di: 'di{0}'.format(di) # use str for json
     for di, df_durind in df.groupby(DUR_COL):
+        print 'di={0}, {1} trials'.format(di, len(df_durind))
+        objs[di_key_for_json(di)] = {'di': di, 'dur': durmap[di], 'boots': {}}
         xy = df_durind[['coherence','correct']].sort('coherence').groupby('coherence')
         zss = [bootstrap(y.values, nboots) for x,y in xy]
         zss = [np.vstack([z[i] for z in zss]) for i in xrange(nboots)]
-        print di
         for i in xrange(nboots+1):
             if i == 0:
                 xs, ys = zip(*df_durind[['coherence','correct']].values)
@@ -68,18 +71,21 @@ def solve_all_durations(df, dotmode, nboots, thresh_val, ax, show_for_each_dotmo
                 xs = zss[i-1][:, 0].astype('float')
                 ys = zss[i-1][:, 1].astype('float')
             theta, thresh = solve_one_duration(xs, ys, di, thresh_val)
+            obj = {}
             if theta is not None and ax is not None:
-                plot_weibull_with_data(df_durind, dotmode, theta, thresh, colmap[di], durmap[di], ax, show_for_each_dotmode, i>0)
+                obj = plot_weibull_with_data(df_durind, dotmode, theta, thresh, colmap[di], durmap[di], ax, show_for_each_dotmode, i>0)
+            objs[di_key_for_json(di)]['boots']['b{0}'.format(i)] = obj
             thetas[di].append(theta)
             threshes[di].append(thresh)
-        # plot_weibull_with_data(df_durind, dotmode, np.mean(np.array(thetas[di]),0), inv_weibull(np.mean(np.array(thetas[di]),0), thresh_val), colmap[di], durmap[di], ax, show_for_each_dotmode, i>0)
-    return threshes, thetas
+            print theta, thresh
+    return threshes, thetas, objs
 
 def solve_ignoring_durations(df, dotmode, nboots, thresh_val, ax):
     di = -1
     threshes, thetas = [], []
     zss = [bootstrap(y.values, nboots) for x,y in df[['coherence','correct']].sort('coherence').groupby('coherence')]
     zss = [np.vstack([z[i] for z in zss]) for i in xrange(nboots)]
+    objs = {}
     for i in xrange(nboots+1):
         if i == 0:
             xs, ys = zip(*df[['coherence','correct']].values)
@@ -89,11 +95,13 @@ def solve_ignoring_durations(df, dotmode, nboots, thresh_val, ax):
             xs = zss[i-1][:, 0].astype('float')
             ys = zss[i-1][:, 1].astype('float')
         theta, thresh = solve_one_duration(xs, ys, di, thresh_val)
+        obj = {}
         if theta is not None and ax is not None:
-            plot_weibull_with_data(df, dotmode, theta, thresh, 'g' if dotmode == '2d' else 'r', dotmode, ax, False, i>0)
+            obj = plot_weibull_with_data(df, dotmode, theta, thresh, 'g' if dotmode == '2d' else 'r', dotmode, ax, False, i>0)
+        objs['b{0}'.format(i)] = obj
         thetas.append(theta)
         threshes.append(thresh)
-    return threshes, thetas
+    return threshes, thetas, objs
 
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
 def remove_nan_or_inf(items):
@@ -140,12 +148,28 @@ def find_elbow(xs, ys, presets=None, ntries=10):
             return theta_hat
     return None
 
+def objs_to_json(objs, outdir, label, subj_label):
+    class NumPyArangeEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist() # or map(int, obj)
+            return json.JSONEncoder.default(self, obj)
+
+    for dotmode, obj in objs.iteritems():
+        json_outfile = os.path.join(outdir, 'pcorVsCohByDur_{label}-{subj}-{dotmode}.json'.format(label=label, subj=subj_label, dotmode=dotmode))
+        with open(json_outfile, 'w') as f:
+            json.dump(obj, f, cls=NumPyArangeEncoder)
+
 def plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label, x_split_default=130, solve_elbow=True):
     # presets = (None, -1.0, None, -0.5, None)
     presets = None
     fig = plt.figure()
     ax = plt.subplot(111)
+    objs = {}
     for dotmode, (xs, ys) in pts.iteritems():
+        print 'min x: {0}, max x: {1}'.format(min(xs), max(xs))
+        print 'Ignoring: '.format([(x,y) for x,y in zip(xs,ys) if is_nan_or_inf([x,y]).any()])
+        print xs, ys
         color='g' if dotmode == '2d' else 'r'
         theta_hat = find_elbow(xs, ys, presets) if solve_elbow else None
         xs = 1000*np.array(xs)
@@ -156,6 +180,12 @@ def plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label, x_spli
             x_split = x_split_default
         else:
             x_split = None
+        objs[dotmode] = {}
+        objs[dotmode]['binned'] = {'xs': xs, 'ys': ys}
+        if theta_hat is not None:
+            objs[dotmode]['fit'] = {'x0': x_split, 'm0': theta_hat[1], 'b0': theta_hat[2], 'm1': theta_hat[3], 'b1': theta_hat[4]}
+        else:
+            objs[dotmode]['fit'] = {}
         if x_split is not None:
             print 'Splitting xs at {0} ms'.format(x_split)
             assert all(operator.le(xs[i], xs[i+1]) for i in xrange(len(xs)-1)) # xs is sorted
@@ -185,6 +215,10 @@ def plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label, x_spli
                 # x, y, yerr = ws.index.values.astype('float'), ws['pcor']['mean'].values, ws['pcor']['std'].values
                 # yerr = zip(*np.log(ws[['pcor_lower', 'pcor_upper']]).values)
                 # plt.errorbar(np.log(x), np.log(y), yerr=yerr, marker='o', linestyle='', label=dotmode if i==0 else '', color=color)
+                tmp = [(xc,yc) for xc,yc in zip(x, y) if not any(is_nan_or_inf(np.array([xc,yc])))]
+                if not tmp:
+                    continue
+                x, y = zip(*tmp)
                 plt.scatter(np.log(x), np.log(y), marker='o', s=4, label=dotmode if i==0 else '', color=color)
                 x0 = [min(x), x_split] if i == 0 else [x_split, max(x)]
                 plt.plot(np.log(x0), slope*np.log(x0) + intercept, color=color)
@@ -197,8 +231,9 @@ def plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label, x_spli
     # plt.ylim([None, None])
     plt.legend()
     if savefig:
-        outfile = os.path.join(outdir, '{0}.png'.format(subj_label))
-        plt.savefig(outfile)
+        png_outfile = os.path.join(outdir, 'pcorVsCohByDur-{0}.png'.format(subj_label))
+        plt.savefig(png_outfile)
+        objs_to_json(objs, outdir, 'elbow', subj_label)
     else:
         plt.show()
 
@@ -214,7 +249,7 @@ def plot_info(ax, savefig, outdir, label, sublabel=None):
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     if savefig:
-        outfile = os.path.join(outdir, '{0}-{1}.png'.format(sublabel, label))
+        outfile = os.path.join(outdir, 'pcorVsCohByDur-{0}-{1}.png'.format(sublabel, label))
         plt.savefig(outfile)
     else:
         plt.show()
@@ -222,9 +257,9 @@ def plot_info(ax, savefig, outdir, label, sublabel=None):
 def custom_filter_1():
     return [make_gt_filter('duration', 0.7)]
 
-def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, savefig, outdir):
-    df = default_filter_df(load(args))
-    # df = default_filter_df(load(args, custom_filter_1()))
+def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, savefig, outdir, isLongDur):
+    df = load(args, None, isLongDur)
+    # df = default_filter_df(load(args, custom_filter_1(), isLongDur), isLongDur)
     print df.describe()
     ndurinds = len(df[DUR_COL].unique())
     subjs = df['subj'].unique()
@@ -237,15 +272,18 @@ def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, sav
     durmap = make_durmap(df)
     durmap[-1] = 'all'
     pts = {}
+    objs = {}
     for dotmode, df_dotmode in df.groupby('dotmode'):
         print dotmode
         if show_for_each_dotmode:
             fig = plt.figure()
             ax = plt.subplot(111)
         elif ndurinds > 1:
-            _, _ = solve_ignoring_durations(df_dotmode, dotmode, nboots, thresh_val, ax)
+            _, _, obj = solve_ignoring_durations(df_dotmode, dotmode, nboots, thresh_val, ax)
+            objs[dotmode] = obj
             continue
-        threshes, thetas = solve_all_durations(df_dotmode, dotmode, nboots, thresh_val, ax, show_for_each_dotmode)
+        threshes, thetas, obj = solve_all_durations(df_dotmode, dotmode, nboots, thresh_val, ax, show_for_each_dotmode)
+        objs[dotmode] = obj
         xs, ys = zip(*[(durmap[di], thresh) for di in sorted(threshes) for thresh in threshes[di]])
         pts[dotmode] = (xs, ys)
         if show_for_each_dotmode:
@@ -254,6 +292,8 @@ def thresholds(args, nboots, plot_thresh, show_for_each_dotmode, thresh_val, sav
         plot_info(ax, savefig, outdir, "duration=%0.2fs" % durmap[df[DUR_COL].unique()[0]] + (', {0}'.format(subjs[0].upper()) if len(subjs) == 1 else ''))
     elif not show_for_each_dotmode:
         plot_info(ax, savefig, outdir, "all durations", subj_label)
+    if savefig:
+        objs_to_json(objs, outdir, 'thresh{0}'.format('' if show_for_each_dotmode else '_by_dotmode'), subj_label)
     if plot_thresh:
         plot_and_fit_thresholds(pts, thresh_val, savefig, outdir, subj_label)
 
@@ -263,7 +303,6 @@ def plot(df, dotmode, show_for_each_dotmode, savefig, outdir):
     durmap = make_durmap(df)
 
     subjs = df['subj'].unique()
-    outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
 
     if show_for_each_dotmode:
         fig = plt.figure()
@@ -289,12 +328,13 @@ def plot(df, dotmode, show_for_each_dotmode, savefig, outdir):
     if not show_for_each_dotmode:
         return
     if savefig:
+        outfile = os.path.join(outdir, 'pcorVsCohByDur-{subj}-{dotmode}.png')
         plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode=dotmode))
     else:
         plt.show()
 
-def main(args, show_for_each_dotmode, savefig, outdir):
-    df = load(args)
+def main(args, show_for_each_dotmode, savefig, outdir, isLongDur):
+    df = load(args, None, isLongDur)
     if not show_for_each_dotmode:
         fig = plt.figure()
     for dotmode, df_dotmode in df.groupby('dotmode'):
@@ -302,8 +342,8 @@ def main(args, show_for_each_dotmode, savefig, outdir):
     if not show_for_each_dotmode:
         if savefig:
             subjs = df['subj'].unique()
-            outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
-            plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode='2d3d'))
+            png_outfile = os.path.join(outdir, 'pcorVsCohByDur-{subj}-{dotmode}.png')
+            plt.savefig(png_outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode='2d3d'))
         else:
             plt.show()
 
@@ -319,9 +359,10 @@ if __name__ == '__main__':
     parser.add_argument('--thresh-val', type=float, default=0.75)
     parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default='.')
+    parser.add_argument('--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:
-        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val, args.savefig, args.outdir)
+        thresholds(ps, args.nboots, args.plot_thresh, not args.join_dotmode, args.thresh_val, args.savefig, args.outdir, args.is_long_dur)
     else:
-        main(ps, not args.join_dotmode, args.savefig, args.outdir)
+        main(ps, not args.join_dotmode, args.savefig, args.outdir, args.is_long_dur)

@@ -40,13 +40,14 @@ MARKER_MAP = {'2d': 's', '3d': 's'}
 
 NDOTS = 40
 FRATE = 60
-nframes = lambda duration: np.ceil(duration*FRATE)
+nframes = lambda duration: np.ceil(duration*FRATE)-1
 actualduration = lambda duration: nframes(duration)/FRATE
 nsigframes = lambda duration: nframes(duration) - 1 # takes two to see motion
 nsigdots = lambda coherence, duration: (NDOTS*coherence)*nsigframes(duration)
 
 min_dur, max_dur, NBINS = 0.04, 1.2, 10
 BINS = list(np.logspace(np.log10(min_dur - 0.001), np.log10(max_dur), NBINS))
+min_dur_longDur, max_dur_longDur, NBINS_longDur = 0.3, 6.0, 5
 
 AGG_SUBJ_NAME = 'ALL'
 all_subjs = ['huk', 'klb', 'krm', 'lnk', 'lkc']

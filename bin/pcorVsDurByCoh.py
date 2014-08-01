@@ -1,4 +1,5 @@
-import os
+import json
+import os.path
 import argparse
 
 import numpy as np
@@ -33,7 +34,7 @@ def plot_inner(ax, df):
         ax.plot(xsp, ysp, color=colmap[coh], label="%0.2f" % coh, marker='o', linestyle='-')
 
 DEFAULT_FITS = {'ALL': {'2d': [0.84859761, 79.69870077], '3d': [0.74840758, 144.49747108]}}
-def plot_inner_across_cohs(ax, df, dotmode, fit_default=DEFAULT_FITS['ALL']):
+def plot_inner_across_cohs(ax, df, dotmode, savefig, outdir, fit_default=DEFAULT_FITS['ALL']):
     color='g' if dotmode == '2d' else 'r'
     durmap = dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
     isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
@@ -50,30 +51,36 @@ def plot_inner_across_cohs(ax, df, dotmode, fit_default=DEFAULT_FITS['ALL']):
         plt.text(th[-1] + 5, 0.5 if dotmode == '2d' else 0.45, 'tau={0:.2f}'.format(th[-1]), color=color)
         plt.text(max(xsp) - 120, th[0] - 0.03, 'A={0:.2f}'.format(th[0]), color=color)
         # plt.axhline(th[0], color=color, linestyle='dotted')
+    if savefig:
+        subjs = df['subj'].unique()
+        subj_label = subjs[0].upper() if len(subjs) == 1 else 'ALL'
+        outfile = os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{dotmode}.json'.format(subj=subj_label, dotmode=dotmode))
+        with open(outfile, 'w') as f:
+            obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
+            json.dump(obj, f)
 
 def plot_info(ax, title):
     plt.title('{0}: % correct vs. duration'.format(title))
     plt.xlabel('duration')
     plt.ylabel('% correct')
-    plt.xscale('log')
-    plt.xlim([30, 1050])
+    # plt.xscale('log')
+    # plt.xlim([30, 1050])
     plt.ylim([0.4, 1.05])
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-def plot(ax, df, dotmode, show_for_each_dotmode):
-    subjs = df['subj'].unique()
+def plot(ax, df, dotmode, show_for_each_dotmode, savefig, outdir):
     if show_for_each_dotmode:
+        subjs = df['subj'].unique()
         plot_inner(ax, df)
         plot_info(ax, dotmode + ', {0}'.format(subjs[0].upper() if len(subjs) == 1 else ''))
     else:
-        plot_inner_across_cohs(ax, df, dotmode)
+        plot_inner_across_cohs(ax, df, dotmode, savefig, outdir)
 
-def main(args, show_for_each_dotmode, savefig=False, outdir=None):
-    df = load(args)
+def main(args, show_for_each_dotmode, savefig=False, outdir=None, isLongDur=False):
+    df = load(args, None, isLongDur)
     subjs = df['subj'].unique()
-    outfile = os.path.join(outdir, '{subj}-{dotmode}.png')
     if not show_for_each_dotmode:
         fig = plt.figure()
         ax = plt.subplot(111)
@@ -81,15 +88,17 @@ def main(args, show_for_each_dotmode, savefig=False, outdir=None):
         if show_for_each_dotmode:
             fig = plt.figure()
             ax = plt.subplot(111)
-        plot(ax, df_dotmode, dotmode, show_for_each_dotmode)
+        plot(ax, df_dotmode, dotmode, show_for_each_dotmode, savefig, outdir)
         if show_for_each_dotmode:
             if savefig:
-                plt.savefig(outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode=dotmode))
+                png_outfile = os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{dotmode}.png')
+                plt.savefig(png_outfile.format(subj=subjs[0] if len(subjs) == 1 else 'ALL', dotmode=dotmode))
             else:
                 plt.show()
     if not show_for_each_dotmode:
         plot_info(ax, 'all cohs' + ', {0}'.format(subjs[0].upper() if len(subjs) == 1 else ''))
-        plt.show()
+        if not savefig:
+            plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -98,6 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('--join-dotmode', action='store_true', default=False)
     parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default='.')
+    parser.add_argument('--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
-    main(ps, not args.join_dotmode, args.savefig, args.outdir)
+    main(ps, not args.join_dotmode, args.savefig, args.outdir, args.is_long_dur)

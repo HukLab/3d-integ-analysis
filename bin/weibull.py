@@ -54,7 +54,7 @@ def log_likelihood(data, fcn, thetas, fcn_kwargs):
     #     val = sum(map(log_likeli, data))
     return val
 
-def solve(xs, ys, unfold=False, guess=(0.5, 0.7, 0.5, 0.85), ntries=20, quick=True):
+def solve(xs, ys, unfold=False, guess=(0.5, 1.5, 0.5, 1.0), ntries=20, quick=True):
     guess = np.array(guess)
     APPROX_ZERO, APPROX_ONE = 0.00001, 0.99999
     bounds = [(APPROX_ZERO, None), (APPROX_ZERO, None)] + [(APPROX_ZERO, APPROX_ONE)] * (len(guess) - 2)
