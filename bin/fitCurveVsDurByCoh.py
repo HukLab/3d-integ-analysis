@@ -5,9 +5,10 @@ import logging
 import argparse
 
 import numpy as np
+import pandas as pd
 
 from pd_io import load, resample_by_grp
-from sample import sample_wr, bootstrap
+from sample import sample_wr, bootstrap, bootstrap_se
 from settings import DEFAULT_THETA, NBOOTS_BINNED_PS, FIT_IS_COHLESS, QUICK_FIT, THETAS_TO_FIT, AGG_SUBJ_NAME, BINS, min_dur, max_dur
 
 import twin_limb
@@ -102,21 +103,6 @@ def fit(df, bins, fits_to_fit, nboots):
     results['fits']['binned_pcor'] = {}
     make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)    
 
-    if fits_to_fit == ['sat-exp']:
-        durmap = durmap_fcn(df)
-        logging.warning('sat-exp is assuming default BINS.')
-        for coh, dfc in df.groupby('coherence'):
-            logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(dfc)))
-            results['ntrials'][coh] = len(dfc)
-            dfc1 = dfc.groupby('duration_index', as_index=False)['correct'].agg([np.mean, len])['correct'].reset_index()
-            dis, ps, ns = zip(*dfc1[['duration_index','mean','len']].values)
-            ds = [durmap[di] for di in dis]
-            results['fits']['binned_pcor'][coh] = dict((d, (p, 0.0, n)) for d,p,n in zip(ds, ps, ns))
-            B = DEFAULT_THETA['sat-exp']['B']
-            A, T = saturating_exponential.fit_df(dfc, B)
-            results['fits']['sat-exp'][coh] = [{'A': A, 'B': B, 'T': T}]
-        return results
-
     ts_all =  as_C_x_y(df)
     for key in fits_to_fit:
         if FIT_IS_COHLESS[key]:
@@ -132,12 +118,49 @@ def fit(df, bins, fits_to_fit, nboots):
                 results['fits'][key][coh] = bootstrap_fit_curves(ts_cur_coh, make_bootstrap_fcn(FIT_FCNS[key], coh), nboots)
     return results
 
+
+def fit2(df, bins, fits_to_fit, nboots):
+    """
+    this uses the pandas dataframe, df, all the way into the fitting function,
+        whereas fit() pulls out the df's values and hands the fitting function a big list of data
+    fit2 is sooooo much faster. currently it's only available if you're fitting sat-exp
+    """
+    def fit_inner(df, B, nboots):
+        A, T = saturating_exponential.fit_df(df, B)
+        logging.info('Fitting.')
+        ths = [{'A': A, 'B': B, 'T': T}]
+        for inds in bootstrap(df.index.values, nboots):
+            A, T = saturating_exponential.fit_df(df.ix[inds,:].copy().reset_index(), B)
+            ths.append({'A': A, 'B': B, 'T': T})
+        return ths
+
+    results = {}
+    results['ntrials'] = {}
+    results['cohs'] = sorted(df['coherence'].unique())
+    results['fits'] = {'sat-exp': {}}
+    results['fits']['binned_pcor'] = {}
+    msg = 'sat-exp is assuming duration is binned by duration_index column.'
+    logging.warning(msg)
+    
+    durmap = durmap_fcn(df)
+    B = DEFAULT_THETA['sat-exp']['B']
+    for coh, dfc in df.groupby('coherence'):
+        msg = '{0}%: Found {1} trials'.format(int(coh*100), len(dfc))
+        logging.info(msg)
+        results['ntrials'][coh] = len(dfc)
+        results['fits']['binned_pcor'][coh] = binned_ps(as_x_y(df), bins, NBOOTS_BINNED_PS, include_se=True)
+        results['fits']['sat-exp'][coh] = fit_inner(dfc, B, nboots)
+    return results
+
 def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False):
     if resample:
         df = resample_by_grp(df, 5)
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(df), subj, dotmode)
     logging.info(msg)
-    results = fit(df, bins, fits_to_fit, nboots)
+    if len(fits_to_fit) == 1 and 'sat-exp' in fits_to_fit:
+        results = fit2(df, bins, fits_to_fit, nboots)
+    else:
+        results = fit(df, bins, fits_to_fit, nboots)
     outfile = makefn(outdir, subj, dotmode, '', 'pickle')
     pickle_fit(results, bins, outfile, subj, dotmode)
 

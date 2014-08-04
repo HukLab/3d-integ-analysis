@@ -1,5 +1,5 @@
-from collections import Iterable
 import itertools
+from collections import Iterable
 
 import numpy as np
 
@@ -29,9 +29,13 @@ def fit(data, thetas, quick=False, guesses=None, method='TNC'):
     return fit_mle(data, saturating_exp, thetas, THETA_ORDER, GUESSES, BOUNDS, CONSTRAINTS, quick, guesses, method)
 
 def fit_df(df, B0, x0=DEFAULT_DELAY, method='L-BFGS-B'):
+    """
+    df is a pandas DataFrame with two columns: 'duration' (in sec) and 'correct' (bool or 0/1)
+    returns (A, T) of resulting fit
+    """
     F = saturating_exp
     L = lambda x, y, (A, B, T, x0), F=F: (F(x, A, B, T, x0)**y)*((1-F(x, A, B, T, x0))**(1-y))
-    obj = lambda (A, T), B=B0, x=df.duration, y=df.correct, L=L: -np.log(L(x, y, (A, B, T, x0))).sum()
+    obj = lambda (A, T), B=B0, x=df['duration'], y=df['correct'], L=L: -np.log(L(x, y, (A, B, T, x0))).sum()
     guesses = list(itertools.product(A_GUESSES, T_GUESSES))
     bounds = [BOUNDS['A'], BOUNDS['T']]
     th = mle([1], obj, guesses=guesses, bounds=bounds, constraints=[], quick=True, method=method)

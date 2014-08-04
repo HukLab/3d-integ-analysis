@@ -135,8 +135,7 @@ def write(rss, outfile_strf):
             csvwriter.writerows(rs)
 
 def main(indir, outdir):
-    for infile in glob.glob(os.path.join(indir, '*.json')):
-        infile = os.path.abspath(os.path.join(indir, infile))
+    for infile in glob.glob(os.path.join(os.path.abspath(indir), '*.json')):
         outfile_strf = os.path.abspath(os.path.join(outdir, os.path.splitext(os.path.split(infile)[-1])[0] + '-{0}.csv'))
         with open(infile) as f:
             obj = json.load(f)
@@ -145,7 +144,7 @@ def main(indir, outdir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', required=True, type=str)
-    parser.add_argument('--outdir', required=True, type=str)
+    parser.add_argument('-i', '--indir', required=True, type=str)
+    parser.add_argument('-o', '--outdir', required=True, type=str)
     args = parser.parse_args()
     main(args.indir, args.outdir)
