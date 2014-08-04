@@ -1,6 +1,7 @@
 import json
 import os.path
 import argparse
+import itertools
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -53,21 +54,17 @@ def write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir):
         obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
         json.dump(obj, f)
 
-def fit_curve(df, A=None, T=None):
+def fit_curve(df):
     B = DEFAULT_THETA['sat-exp']['B']
-    if A is None and T is None:
-        data = df[['duration', 'correct']].values
-        th = saturating_exponential.fit(data, (None, B, None), quick=True)
-        if len(th) > 0 and th[0]['success']:
-            A, T = th[0]['x']
-        else:
-            return None, None, None
+    A, T = saturating_exponential.fit_df(df, B)
+    if A is None:
+        return None, None, None
     xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
     ys = saturating_exponential.saturating_exp(xs, A, B, T)
     sec_to_ms = lambda xs: [x*1000 for x in xs]
     return sec_to_ms(xs), ys, (A, B, T)
 
-def fit(args, outdir, isLongDur=False):
+def fit(args, outdir, isLongDur=False, plot=True):
     df = load(args, None, isLongDur)
     subj = subj_label(df)
     durmap = durmap_fcn(df)
@@ -75,17 +72,25 @@ def fit(args, outdir, isLongDur=False):
         isp, ysp = zip(*df_dotmode.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
         xsp = [1000*durmap[i] for i in isp]
         xs, ys, th = fit_curve(df_dotmode)
+        if not th:
+            print 'ERROR: No fits found.'
+            continue
         th = list(th)
         th[-1] += 30 # for delay
+        if plot:
+            plt.scatter(xsp, ysp, color='g' if dotmode == '2d' else 'r')
+            plt.plot(xs, ys, color='g' if dotmode == '2d' else 'r')
         if outdir:
             write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir)
+    if plot:
+        plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--subj", required=False, type=str, help="")
     parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
     parser.add_argument('--fit', action='store_true', default=False)
-    parser.add_argument('--outdir', type=str, default='.')
+    parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}

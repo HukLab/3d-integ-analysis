@@ -185,7 +185,7 @@ def param_curve_both_conds(results, cohs, methods, outfile, key, title, ylabel):
         param_curve(xss, yss, yerrs, cols, mkrs, lins, lbls, outfile, title, ylabel)
 
 def load_pickle(indir, subj, cond):
-    infile = os.path.join(indir, '{0}-{1}-fit.pickle'.format(subj, cond))
+    infile = makefn(indir, subj, cond, '', 'pickle')
     return pickle.load(open(infile))
 
 def main(conds, subj, indir, outdir):

@@ -108,7 +108,7 @@ def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=
         NOTE: SLSQP tends to give a lot of run-time errors...
     """
     if len(data) == 0 or len(guesses) == 0:
-        return None
+        return []
     if bounds is None:
         bounds = []
     if constraints is None:

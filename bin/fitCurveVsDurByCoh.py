@@ -91,6 +91,8 @@ def as_x_y(df):
     vals = df[['duration', 'correct']].values
     return np.array([(a, int(b)) for a,b in vals])
 
+durmap_fcn = lambda df: dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
+
 def fit(df, bins, fits_to_fit, nboots):
     cohs = sorted(df['coherence'].unique())
     results = {}
@@ -98,7 +100,22 @@ def fit(df, bins, fits_to_fit, nboots):
     results['cohs'] = cohs
     results['fits'] = dict((fit, {}) for fit in fits_to_fit)
     results['fits']['binned_pcor'] = {}
-    make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)
+    make_bootstrap_fcn = lambda fcn, coh: lambda ts, gs: fcn(ts, bins, coh, gs)    
+
+    if fits_to_fit == ['sat-exp']:
+        durmap = durmap_fcn(df)
+        logging.warning('sat-exp is assuming default BINS.')
+        for coh, dfc in df.groupby('coherence'):
+            logging.info('{0}%: Found {1} trials'.format(int(coh*100), len(dfc)))
+            results['ntrials'][coh] = len(dfc)
+            dfc1 = dfc.groupby('duration_index', as_index=False)['correct'].agg([np.mean, len])['correct'].reset_index()
+            dis, ps, ns = zip(*dfc1[['duration_index','mean','len']].values)
+            ds = [durmap[di] for di in dis]
+            results['fits']['binned_pcor'][coh] = dict((d, (p, 0.0, n)) for d,p,n in zip(ds, ps, ns))
+            B = DEFAULT_THETA['sat-exp']['B']
+            A, T = saturating_exponential.fit_df(dfc, B)
+            results['fits']['sat-exp'][coh] = [{'A': A, 'B': B, 'T': T}]
+        return results
 
     ts_all =  as_C_x_y(df)
     for key in fits_to_fit:
