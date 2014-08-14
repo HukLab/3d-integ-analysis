@@ -44,7 +44,7 @@ def plot(args, isLongDur=False):
         fig = plt.figure()
         ax = plt.subplot(111)
         title = '{0}, {1}'.format(dotmode, subj)
-        plot_inner(ax, df)
+        plot_inner(ax, df_dotmode)
         plot_info(ax, title)
         plt.show()
 
@@ -65,7 +65,7 @@ def fit_curve(df):
     return sec_to_ms(xs), ys, (A, B, T)
 
 def fit(args, outdir, isLongDur=False, plot=True):
-    df = load(args, None, isLongDur)
+    df = load(args, None, 'longDur' if isLongDur else False)
     subj = subj_label(df)
     durmap = durmap_fcn(df)
     for dotmode, df_dotmode in df.groupby('dotmode'):
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
     parser.add_argument('--fit', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default=None)
-    parser.add_argument('--is-long-dur', action='store_true', default=False)
+    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
     if args.fit:

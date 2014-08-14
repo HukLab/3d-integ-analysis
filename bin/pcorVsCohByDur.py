@@ -334,7 +334,7 @@ def plot(df, dotmode, show_for_each_dotmode, savefig, outdir):
         plt.show()
 
 def main(args, show_for_each_dotmode, savefig, outdir, isLongDur):
-    df = load(args, None, isLongDur)
+    df = load(args, None, 'longDur' if isLongDur else False)
     if not show_for_each_dotmode:
         fig = plt.figure()
     for dotmode, df_dotmode in df.groupby('dotmode'):
@@ -359,7 +359,7 @@ if __name__ == '__main__':
     parser.add_argument('--thresh-val', type=float, default=0.75)
     parser.add_argument('--savefig', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default='.')
-    parser.add_argument('--is-long-dur', action='store_true', default=False)
+    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     if args.thresh:

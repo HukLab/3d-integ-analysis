@@ -30,6 +30,7 @@ def load_df(sessions_infile=SESSIONS_INFILE, trials_infile=TRIALS_INFILE):
 
 make_equal_filter = lambda key, val: (key, lambda x: x == val)
 make_gt_filter = lambda key, val: (key, lambda x: x >= val)
+make_lt_filter = lambda key, val: (key, lambda x: x <= val)
 
 def interpret_filters(args):
     filters = []
@@ -54,15 +55,18 @@ def shift_bins(df, durbin_3d=2, durbin_floor=1):
     df = df[df['duration_index'] >= durbin_floor]
     return df
 
-def rebin(df, isLongDur, N=10):
+def rebin(df, extraDataset, N=10):
     """
     reassigns duration_index of each trial by rebinning with N log-spaced durations between dur0 and dur1
     removes trials with duration above the dur1
     """
     N += 1
     df['real_duration'] = actualduration(df['duration'])
-    if isLongDur:
+    if extraDataset == 'longDur':
         dur0 = min_dur_longDur
+        dur1 = max_dur_longDur
+    elif extraDataset == 'both':
+        dur0 = min_dur
         dur1 = max_dur_longDur
     else:
         dur0 = min_dur
@@ -76,19 +80,19 @@ def rebin(df, isLongDur, N=10):
     bins = bins[1:]
     bins[-1] = dur1 + 0.01
     
-    if True:
+    if not isLongDur:
         """
         as per leor: first 5 frames should be their own bin; after that, binned as per normal
         so need to combine nf and bin_lkp somehow
         """
         max_nframe_as_bin = 5
         nf = sorted(nsigframes(df['real_duration']).unique().tolist())
-        bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
 
         bins1 = df['real_duration'].unique().tolist()[:nf.index(max_nframe_as_bin+1)]
         bins = bins1 + [b for b in bins if b > bins1[-1]]
         bins = bins[1:]
 
+    bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
     return df
@@ -130,18 +134,24 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(args=None, filters=None, isLongDur=False):
-    if isLongDur:
+def load(args=None, filters=None, extraDataset=None):
+    if extraDataset == 'longDur':
         df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
+        df = rebin(df, True, NBINS_longDur)
+    elif extraDataset == 'both':
+        df = load_df()
+        df2 = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
+        df = df.append(df2)
+        df = rebin(df, False, 35)
     else:
         df = load_df()
-    df = rebin(df, isLongDur, NBINS_longDur if isLongDur else NBINS)
+        df = rebin(df, False, NBINS)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(args))
     return default_filter_df(df) if not isLongDur else df
 
-def main(args, isLongDur=False):
-    df = load(args, None, isLongDur)
+def main(args, extraDataset=False):
+    df = load(args, None, extraDataset)
     print df.head()
     print df.shape
     plot(df)

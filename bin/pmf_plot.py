@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import logistic
 
@@ -54,7 +55,7 @@ def plot_logistics(df, res):
         plot_info_pmf()
         plt.show()
 
-def plot_elbow(xs, ys, (x0, m0, b0, m1, b1), color):
+def plot_elbow((xs, ys), (x0, m0, b0, m1, b1), color):
     x0 = np.exp(x0)
     f1 = lambda x: (x**m0)*np.exp(b0)
     f2 = lambda x: (x**m1)*np.exp(b1)
@@ -78,9 +79,17 @@ def plot_threshes(df, res, elbs=None):
             return
         xs, ys = zip(*pts)
         xs = 1000*np.array(xs)
+
+        df = pd.DataFrame({'xs': xs, 'ys': ys})
+        df = df.groupby(xs)['ys'].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
+        xs, ys, yerrs = zip(*df.values)
+
         color = color_fcn(dotmode)
-        plt.scatter(xs, ys, marker='o', s=4, label=dotmode, color=color)
+        plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
+        plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
+        plt.xlim([10, 10000])
+        plt.ylim([0.01, 10])
         if dotmode in elbs:
-            plot_elbow(xs, ys, elbs[dotmode]['fit'], color)
+            plot_elbow((xs, ys), elbs[dotmode]['fit'], color)
     plot_info_threshes()
     plt.show()

@@ -122,7 +122,7 @@ def to_json(df, res, elbs, outdir, ignore_dur):
             json.dump(obj, f, cls=NumPyArangeEncoder, indent=4)
 
 def main(ps, nboots, ignore_dur, doPlot, outdir, isLongDur):
-    df = load(ps, None, isLongDur)
+    df = load(ps, None, 'longDur' if isLongDur else False)
     durmap = make_durmap(df)
     res = {}
     for dotmode, df_dotmode in df.groupby('dotmode'):
@@ -140,7 +140,7 @@ def main(ps, nboots, ignore_dur, doPlot, outdir, isLongDur):
     else:
         elbs = {}
     if doPlot and not ignore_dur:
-        plot_logistics(df, res)
+        # plot_logistics(df, res)
         plot_threshes(df, res, elbs)
     if outdir is not None:
         to_json(df, res, elbs, outdir, ignore_dur)
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--plot', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('--ignore-dur', action='store_true', default=False)
-    parser.add_argument('--is-long-dur', action='store_true', default=False)
+    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
     main(ps, args.nboots, args.ignore_dur, args.plot, args.outdir, args.is_long_dur)

@@ -40,34 +40,39 @@ def parse_session_index(infile, keyword):
     tmp = fname.split('_-_')
     error_str = lambda fname, exp: 'WARNING ({1}): Ignoring file {0}.mat'.format(fname, exp)
     if tmp[0] != 'runDots_KTZ':
-        print error_str(fname, 1)
+        # print error_str(fname, 1)
         return
     tmp = tmp[1].split('_')
     if len(tmp) != 5:
-        print error_str(fname, 2)
+        # print error_str(fname, 2)
         return
     subj, dottype, nums, sess_no, wkspc = tmp
     if len(dottype) != 7 + len(keyword) or not dottype.startswith('czuba'): # 'czuba2d'
-        print error_str(fname, 3)
+        # print error_str(fname, 3)
         return
     if not dottype.endswith(keyword):
-        print error_str(fname, 7)
+        # print error_str(fname, 7)
         return
     if len(nums) != 3: # '000'
-        print error_str(fname, 4)
+        # print error_str(fname, 4)
         return
     if wkspc != 'wkspc':
-        print error_str(fname, 5)
+        # print error_str(fname, 5)
         return
     out = sess_no.split('(')[1].split(')')[0]
     if not out.isdigit(): # '(1)'
-        print error_str(fname, 6)
+        # print error_str(fname, 6)
         return
     return int(out)
 
-def load_mat(infile, keyword):
+def load_mat(infile, keyword, outdir='/Volumes/LKCLAB/Users/Leor/2012-TemporalIntegration/runDots_KTZ_data/longDur'):
     mat = sio.loadmat(infile)
     session_index = parse_session_index(infile, keyword)
+    if session_index is None and outdir and 'longDur' in infile:
+        fname = os.path.split(infile)[-1]
+        outfile = os.path.abspath(os.path.join(outdir, fname))
+        print 'RENAMING: {0}'.format(outfile)
+        os.rename(infile, outfile)
     if session_index is None:
         return []
     session = load_session(mat, session_index)
@@ -146,9 +151,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--indir', default=DATADIR, type=str)
     parser.add_argument('-o', '--outdir', default=BASEDIR, type=str)
-    parser.add_argument('-f', '--outfile1', required=True, type=str)
-    parser.add_argument('-g', '--outfile2', required=True, type=str)
+    parser.add_argument('-f', '--sessions_outfile', required=True, type=str)
+    parser.add_argument('-g', '--trials_outfile', required=True, type=str)
     parser.add_argument('-k', '--keyword', default='', type=str)
-    parser.add_argument('-j', '--oldfile1', default=None, type=str)
+    parser.add_argument('-j', '--old_sessions_file', default=None, type=str)
     args = parser.parse_args()
-    main(args.indir, args.outdir, args.outfile1, args.outfile2, args.keyword, args.oldfile1)
+    main(args.indir, args.outdir, args.sessions_outfile, args.trials_outfile, args.keyword, args.old_sessions_file)
