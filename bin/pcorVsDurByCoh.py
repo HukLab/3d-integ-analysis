@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from pd_io import load
 from tools import color_list
 import saturating_exponential
-from settings import DEFAULT_THETA, min_dur, max_dur
+from settings import DEFAULT_THETA, min_dur, max_dur, min_dur_longDur, max_dur_longDur
 
 durmap_fcn = lambda df: dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
 
@@ -54,35 +54,39 @@ def write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir):
         obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
         json.dump(obj, f)
 
-def fit_curve(df):
+def fit_curve(df, (dur0, dur1)):
     B = DEFAULT_THETA['sat-exp']['B']
     A, T = saturating_exponential.fit_df(df, B)
     if A is None:
         return None, None, None
-    xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
+    xs = df.sort('real_duration')['real_duration'].unique() #np.logspace(np.log10(dur0), np.log10(dur1))
     ys = saturating_exponential.saturating_exp(xs, A, B, T)
     sec_to_ms = lambda xs: [x*1000 for x in xs]
     return sec_to_ms(xs), ys, (A, B, T)
 
 def fit(args, outdir, isLongDur=False, plot=True):
-    df = load(args, None, 'longDur' if isLongDur else False)
+    df = load(args, None, 'both' if isLongDur else False)
+    dur_rng = (min_dur, max_dur_longDur) if isLongDur else (min_dur, max_dur)
     subj = subj_label(df)
     durmap = durmap_fcn(df)
     for dotmode, df_dotmode in df.groupby('dotmode'):
-        isp, ysp = zip(*df_dotmode.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
-        xsp = [1000*durmap[i] for i in isp]
-        xs, ys, th = fit_curve(df_dotmode)
+        xs, ys, th = fit_curve(df_dotmode, dur_rng)
         if not th:
             print 'ERROR: No fits found.'
             continue
         th = list(th)
-        th[-1] += 30 # for delay
+        # th[-1] += 30 # for delay
+        print dotmode, th
+
+        isp, ysp = zip(*df_dotmode.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
+        xsp = [1000*durmap[i] for i in isp]
         if plot:
             plt.scatter(xsp, ysp, color='g' if dotmode == '2d' else 'r')
             plt.plot(xs, ys, color='g' if dotmode == '2d' else 'r')
         if outdir:
             write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir)
     if plot:
+        # plt.xscale('log')
         plt.show()
 
 if __name__ == '__main__':

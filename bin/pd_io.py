@@ -7,7 +7,8 @@ import pandas as pd
 
 from pcor_mesh_plot import plot
 from sample import rand_inds
-from settings import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, min_dur, max_dur, NBINS, min_dur_longDur, max_dur_longDur, NBINS_longDur, nsigframes
+from settings import good_subjects, bad_sessions, good_cohs, nsigdots, actualduration, nsigframes
+from settings import min_dur, max_dur, NBINS, min_dur_longDur, max_dur_longDur, NBINS_longDur, NBINS_COMBINED
 
 SESSIONS_COLS = [u'index', u'subj', u'dotmode', u'number']
 TRIALS_COLS = [u'index', u'session_index', u'trial_index', u'coherence', u'duration', u'duration_index', u'direction', u'response', u'correct']
@@ -73,14 +74,14 @@ def rebin(df, extraDataset, N=10):
         dur1 = max_dur
     dur0 = actualduration(dur0)
     dur1 = actualduration(dur1)
-    if isLongDur:
+    if extraDataset == 'longDur':
         bins = list(np.linspace(dur0, dur1, N))
     else:
         bins = list(np.logspace(np.log10(dur0), np.log10(dur1), N))
     bins = bins[1:]
     bins[-1] = dur1 + 0.01
     
-    if not isLongDur:
+    if extraDataset == False:
         """
         as per leor: first 5 frames should be their own bin; after that, binned as per normal
         so need to combine nf and bin_lkp somehow
@@ -137,18 +138,18 @@ def default_filter_df(df):
 def load(args=None, filters=None, extraDataset=None):
     if extraDataset == 'longDur':
         df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
-        df = rebin(df, True, NBINS_longDur)
+        df = rebin(df, extraDataset, NBINS_longDur)
     elif extraDataset == 'both':
         df = load_df()
         df2 = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
         df = df.append(df2)
-        df = rebin(df, False, 35)
+        df = rebin(df, extraDataset, NBINS_COMBINED)
     else:
         df = load_df()
-        df = rebin(df, False, NBINS)
+        df = rebin(df, extraDataset, NBINS)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(args))
-    return default_filter_df(df) if not isLongDur else df
+    return default_filter_df(df) if extraDataset == False else df
 
 def main(args, extraDataset=False):
     df = load(args, None, extraDataset)
