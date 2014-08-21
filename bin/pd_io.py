@@ -86,13 +86,13 @@ def rebin(df, extraDataset, N=10):
         as per leor: first 5 frames should be their own bin; after that, binned as per normal
         so need to combine nf and bin_lkp somehow
         """
+        raise Exception('IN THIS WEIRD PLACE AND I CANNOT GET OUT')
         max_nframe_as_bin = 5
         nf = sorted(nsigframes(df['real_duration']).unique().tolist())
 
         bins1 = df['real_duration'].unique().tolist()[:nf.index(max_nframe_as_bin+1)]
         bins = bins1 + [b for b in bins if b > bins1[-1]]
         bins = bins[1:]
-
     bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
@@ -135,24 +135,24 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(args=None, filters=None, extraDataset=None):
+def load(args=None, filters=None, extraDataset=None, nbins=None):
     if extraDataset == 'longDur':
         df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
-        df = rebin(df, extraDataset, NBINS_longDur)
+        df = rebin(df, extraDataset, NBINS_longDur if nbins is None else nbins)
     elif extraDataset == 'both':
         df = load_df()
         df2 = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
         df = df.append(df2)
-        df = rebin(df, extraDataset, NBINS_COMBINED)
+        df = rebin(df, extraDataset, NBINS_COMBINED if nbins is None else nbins)
     else:
         df = load_df()
-        df = rebin(df, extraDataset, NBINS)
+        df = rebin(df, extraDataset, NBINS if nbins is None else nbins)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(args))
     return default_filter_df(df) if extraDataset == False else df
 
-def main(args, extraDataset=False):
-    df = load(args, None, extraDataset)
+def main(args, extraDataset=False, nbins=None):
+    df = load(args, None, extraDataset, nbins)
     print df.head()
     print df.shape
     plot(df)

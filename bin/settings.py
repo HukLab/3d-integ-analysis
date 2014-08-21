@@ -48,7 +48,7 @@ nsigdots = lambda coherence, duration: (NDOTS*coherence)*nsigframes(duration)
 min_dur, max_dur, NBINS = 0.04, 1.2, 10
 BINS = list(np.logspace(np.log10(min_dur - 0.001), np.log10(max_dur), NBINS))
 min_dur_longDur, max_dur_longDur, NBINS_longDur = 0.3, 6.0, 7
-NBINS_COMBINED = 30
+NBINS_COMBINED = 25
 
 
 AGG_SUBJ_NAME = 'ALL'

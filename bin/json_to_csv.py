@@ -127,9 +127,20 @@ def parse(infile, obj):
     else:
         raise Exception("ERROR interpreting internal filetype.")
 
-def write(rss, outfile_strf):
-    for i, rs in enumerate(rss):
-        with open(outfile_strf.format('params' if i == 1 else 'pts'), 'w') as csvfile:
+def unique_fname(filename):
+    if not os.path.exists(filename):
+        return filename
+    i = 1
+    update_ofcn = lambda infile, i: infile.replace('.json', '-{0}.json'.format(i))
+    while os.path.exists(update_ofcn(filename, i)):
+        i += 1
+    return update_ofcn(filename, i)
+
+def write(rows, outfile_strf):
+    for i, rs in enumerate(rows):
+        outfile = unique_fname(outfile_strf.format('params' if i == 1 else 'pts'))
+        print outfile
+        with open(outfile, 'w') as csvfile:
             csvwriter = csv.DictWriter(csvfile, fieldnames=rs[0].keys())
             csvwriter.writeheader()
             csvwriter.writerows(rs)
@@ -139,8 +150,8 @@ def main(indir, outdir):
         outfile_strf = os.path.abspath(os.path.join(outdir, os.path.splitext(os.path.split(infile)[-1])[0] + '-{0}.csv'))
         with open(infile) as f:
             obj = json.load(f)
-            rss = parse(infile, obj)
-            write(rss, outfile_strf)
+            rows = parse(infile, obj)
+            write(rows, outfile_strf)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
