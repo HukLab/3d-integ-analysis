@@ -31,27 +31,24 @@ def plot_info_threshes():
     plt.yscale('log')
     # plt.ylim([0.4, 1.05])
 
-def plot_pmf_with_data(dfc, theta, thresh, color, label):
-    xsp, ysp = zip(*dfc.groupby('coherence', as_index=False)['correct'].agg(np.mean).values)
-    plt.scatter(xsp, ysp, color=color, label=label, marker='o')
-    xsc = np.linspace(min(xsp), max(xsp))
+def plot_pmf_with_data((xs, ys), theta, thresh, color, label):
+    plt.scatter(xs, ys, color=color, label=label, marker='o')
+    xsc = np.linspace(min(xs), max(xs))
     plt.axvline(thresh, color=color, linestyle='--')
     # if is_number(thresh):
     #     plt.text(thresh + 0.01, 0.5, 'threshold={0}%'.format(int(thresh*100)), color=color)
-    ys = F(xsc, theta)
-    plt.plot(xsc, ys, color=color, linestyle='-')
+    ysf = F(xsc, theta)
+    plt.plot(xsc, ysf, color=color, linestyle='-')
 
-def plot_logistics(df, res):
-    colmap = make_colmap(sorted(df['duration_index'].unique()))
-    durmap = make_durmap(df)
-    for dotmode, df_dotmode in df.groupby('dotmode'):
-        for di, df_durind in df_dotmode.groupby('duration_index'):
-            if dotmode not in res or di not in res[dotmode]:
-                continue
-            theta, thresh = res[dotmode][di]['fit'][0]
+def plot_logistics(df_pts, df_fts):
+    colmap = make_colmap(sorted(df_pts['di'].unique()))
+    for dotmode, dfd in df_pts.groupby('dotmode'):
+        for di, dfp in dfd.groupby('di'):
             color = colmap[di]
-            label = label_fcn(durmap[di])
-            plot_pmf_with_data(df_durind, theta, thresh, color, label)
+            dff = df_fts[(df_fts['dotmode'] == dotmode) & (df_fts['di'] == di)]
+            label = label_fcn(dff['dur'].values[0])
+            theta = [dff[key].values[0] for key in ['loc', 'scale', 'lapse']]
+            plot_pmf_with_data((dfp['x'], dfp['y']), theta, dff['thresh'].values[0], color, label)
         plot_info_pmf()
         plt.show()
 

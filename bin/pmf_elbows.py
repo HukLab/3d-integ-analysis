@@ -24,7 +24,7 @@ def find_two_elbows(xs, ys, ntries=10):
     x0min = None #min(xs)
     x0max = max(xs)*1/3.0 # first 2000 ms
     x1min = None #max(xs)*1/4.0 #  last 2000 ms
-    x1max = max(xs) - 100
+    x1max = max(xs) - 200
     print 'NOTE: ENFORCING ELBOW BOUNDS'
     print 'min={0}, max={1}, x0=({2}, {3}), x1=({4}, {5})'.format(min(xs), max(xs), x0min, x0max, x1min, x1max)
 
@@ -69,19 +69,8 @@ def find_elbows_one_boot(df, nElbows):
     print 'elbow={0}'.format(th)
     return dict(zip(keys, th)) if th is not None else {}
 
-def df_res(df, res):
-    durmap = make_durmap(df)
+def find_elbows_per_boots(dfr, nElbows):
     rows = []
-    for dotmode, res1 in res.iteritems():
-        for di, res0 in res1.iteritems():
-            rows.extend([(dotmode, bi, durmap[di], thresh) for bi, (theta, thresh) in enumerate(res0['fit'])])
-    df = pd.DataFrame(rows, columns=['dotmode', 'bi', 'dur', 'thresh'])
-    df['dur'] = 1000*df['dur']
-    return df
-
-def find_elbows_per_boots(df, res, nElbows):
-    rows = []
-    dfr = df_res(df, res)
     for dotmode, dfp in dfr.groupby('dotmode'):
         if dotmode == '3d':
             print 'WARNING: Ignoring all 3D thresholds at x={0}'.format(dfp['dur'].min())
@@ -90,6 +79,4 @@ def find_elbows_per_boots(df, res, nElbows):
             row = find_elbows_one_boot(dfpts, nElbows)
             row.update({'dotmode': dotmode, 'bi': bi})
             rows.append(row)
-    dfE1 = pd.DataFrame(rows)
-    # dfE2 = dfr.rename(columns=lambda x: {'dur': 'x', 'thresh': 'y'}.get(x, x), inplace=False)
-    return dfE1, dfr
+    return pd.DataFrame(rows)

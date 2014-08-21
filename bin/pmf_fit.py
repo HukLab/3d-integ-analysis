@@ -38,14 +38,11 @@ def threshold_and_bootstrap(dfc, thresh_val, nboots):
     return (xs, ys, zs), (mean_theta, mean_thresh), zip(thetas, threshes)
 
 def threshold(dfc, nboots, thresh_val=THRESH_VAL):
-    out = {}
     pts, (theta, thresh), booted = threshold_and_bootstrap(dfc, thresh_val, nboots)
     print 'theta={0}, thresh={1}'.format(theta, thresh)
-    out['fit'] = [(theta, thresh)]
-    out['binned'] = pts
     if nboots > 0:
-        out['fit'].extend(booted)
-    return out
+        return pts, (theta, thresh), booted
+    return pts, (theta, thresh), []
 
 def unique_fname(filename):
     if not os.path.exists(filename):
@@ -78,31 +75,54 @@ def to_json(df, nbins, nboots, res, elbs, outdir, ignore_dur):
         with open(unique_fname(json_outfile), 'w') as f:
             json.dump(obj, f, cls=NumPyArangeEncoder, indent=4)
 
+def make_rows(df, dotmode, durmap, di, nboots):
+    print '{0}, di={1}, d={2}ms, n={3}'.format(dotmode, di, label_fcn(1000*durmap[di]), len(df))
+    rows1 = []
+    rows2 = []
+    (xs, ys, zs), mean_fit, boot_fits = threshold(df, nboots)
+    # T0 = ['subj', 'dotmode', 'di', 'dur', 'x', 'y', 'ntrials']
+    # T1 = ['subj', 'dotmode', 'di', 'dur', 'bi', 'thresh', 'loc', 'scale', 'lapse']
+    for (x,y,z) in zip(xs, ys, zs):
+        row = {'x': x, 'y': y, 'ntrials': z}
+        row.update({'dotmode': dotmode, 'di': di, 'dur': durmap[di]})
+        rows1.append(row)
+    fits = boot_fits + [list(mean_fit)]
+    for bi, (theta, thresh) in enumerate(fits):
+        row = {'bi': bi, 'thresh': thresh, 'loc': theta[0], 'scale': theta[1], 'lapse': theta[2]}
+        row.update({'dotmode': dotmode, 'di': di, 'dur': durmap[di]})
+        rows2.append(row)
+    return rows1, rows2
+
 def main(ps, nbins, nboots, ignore_dur, doPlot, outdir, isLongDur, nElbows):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
     durmap = make_durmap(df)
-    res = {}
+    rows1, rows2 = [], []
     for dotmode, df_dotmode in df.groupby('dotmode'):
         if ignore_dur:
-            print '{0}'.format(dotmode)
-            res[dotmode] = {}
-            res[dotmode][0] = threshold(df_dotmode, nboots)
+            r1, r2 = make_rows(df_dotmode, dotmode, durmap, di, nboots)
+            rows1.extend(r1)
+            rows2.extend(r2)
         else:
-            res[dotmode] = {}
             for di, df_durind in df_dotmode.groupby('duration_index'):
-                print '{0}, di={1}, d={2}ms, n={3}'.format(dotmode, di, label_fcn(1000*durmap[di]), len(df_durind))
-                res[dotmode][di] = threshold(df_durind, nboots)
+                r1, r2 = make_rows(df_durind, dotmode, durmap, di, nboots)
+                rows1.extend(r1)
+                rows2.extend(r2)
+
+    df_pts = pd.DataFrame(rows1, columns=['subj', 'dotmode', 'di', 'dur', 'x', 'y', 'ntrials'])
+    df_fts = pd.DataFrame(rows2, columns=['subj', 'dotmode', 'di', 'dur', 'bi', 'thresh', 'loc', 'scale', 'lapse'])
+    df_fts['subj'] = ps['subj']
+    df_fts['dur'] = 1000*df_fts['dur']
+    
     if not ignore_dur and nElbows > 0:
-        df_elbs, df_pts = find_elbows_per_boots(df, res, nElbows)
-        # elbs = find_elbows(df, res, nElbows)
+        df_elbs = find_elbows_per_boots(df_fts, nElbows)
     else:
         df_elbs = pd.DataFrame()
-        df_pts = pd.DataFrame()
     if doPlot and not ignore_dur:
-        # plot_logistics(df, res)
-        plot_threshes(df_pts, df_elbs)
+        plot_logistics(df_pts, df_fts)
+        plot_threshes(df_fts, df_elbs)
     if outdir is not None:
-        to_json(df, nbins, nboots, res, df_elbs, outdir, ignore_dur)
+        pass
+        # to_json(df, nbins, nboots, res, df_elbs, outdir, ignore_dur)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
