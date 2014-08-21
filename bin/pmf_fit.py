@@ -30,18 +30,20 @@ def find_elbow(xs, ys, ntries=10):
     return None
 
 def find_two_elbows(xs, ys, ntries=10):
-    x0min = min(xs)
+    x0min = None #min(xs)
     x0max = max(xs)*1/3.0 # first 2000 ms
-    x1min = max(xs)*2/3.0 #  last 2000 ms
+    x1min = None #max(xs)*1/4.0 #  last 2000 ms
     x1max = max(xs) - 100
+    print 'NOTE: ENFORCING ELBOW BOUNDS'
+    print 'min={0}, max={1}, x0=({2}, {3}), x1=({4}, {5})'.format(min(xs), max(xs), x0min, x0max, x1min, x1max)
 
     APPROX_ZERO = 0.0001
     zs = np.array([np.log(xs), np.log(ys)])
     xs, ys = zs[:, ~is_nan_or_inf(zs[0]) & ~is_nan_or_inf(zs[1])]
-    x0min = np.log(x0min)
-    x0max = np.log(x0max)
-    x1min = np.log(x1min)
-    x1max = np.log(x1max)
+    x0min = np.log(x0min) if x0min else x0min
+    x0max = np.log(x0max) if x0max else x0max
+    x1min = np.log(x1min) if x1min else x1min
+    x1max = np.log(x1max) if x1max else x1max
 
     def error_fcn((x0, A0, B0, A1, B1, x1, A2, B2)):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1, xs > x1, xs*A2 + B2])
@@ -78,9 +80,9 @@ def find_elbows(df, res):
         xs, ys = zip(*pts)
         xs = 1000*np.array(xs)
         # th = find_elbow(xs, ys)
-        # if dotmode == '3d':
-        #     xs = xs[1:]
-        #     ys = ys[1:]
+        if dotmode == '3d':
+            xs = xs[1:]
+            ys = ys[1:]
         th = find_two_elbows(xs, ys)
         elbs[dotmode]['fit'] = th
         elbs[dotmode]['binned'] = (xs, ys)
@@ -179,7 +181,7 @@ def main(ps, nboots, ignore_dur, doPlot, outdir, isLongDur):
     else:
         elbs = {}
     if doPlot and not ignore_dur:
-        # plot_logistics(df, res)
+        plot_logistics(df, res)
         plot_threshes(df, res, elbs)
     if outdir is not None:
         to_json(df, res, elbs, outdir, ignore_dur)
