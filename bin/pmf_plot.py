@@ -69,7 +69,7 @@ def plot_elbow((xs, ys), (x0, m0, b0, m1, b1), color):
     plt.text(np.mean(xs0), max(f1(xs0)), 'm={0:.2f}'.format(m0), color=color)
     plt.text(np.mean(xs1), max(f2(xs0)), 'm={0:.2f}'.format(m1), color=color)
 
-def plot_two_elbows((xs, ys), (x0, m0, b0, m1, b1, x1, m2, b2), color):
+def plot_two_elbows((xs, ys), (x0, m0, b0, m1, b1, x1, m2, b2), color, show_text):
     x0 = np.exp(x0)
     x1 = np.exp(x1)
     f1 = lambda x: (x**m0)*np.exp(b0)
@@ -83,12 +83,13 @@ def plot_two_elbows((xs, ys), (x0, m0, b0, m1, b1, x1, m2, b2), color):
     plt.plot(xs2, f3(xs2), color=color)
     plt.axvline(x0, color=color, linestyle='--')
     plt.axvline(x1, color=color, linestyle='--')
-    plt.text(x0, min(f1(xs0)) + min(f1(xs0))/2, 'x0={0:.0f}'.format(x0), color=color)
-    plt.text(x1, min(f2(xs1)) + min(f2(xs1))/2, 'x1={0:.0f}'.format(x1), color=color)
-    if not list(xs0) or not list(xs1): return
-    plt.text(np.mean(xs0), max(f1(xs0)), 'm0={0:.2f}'.format(m0), color=color)
-    plt.text(np.mean(xs1), max(f2(xs1)), 'm1={0:.2f}'.format(m1), color=color)
-    plt.text(np.mean(xs2), max(f3(xs2)), 'm2={0:.2f}'.format(m2), color=color)
+    if show_text:
+        plt.text(x0, min(f1(xs0)) + min(f1(xs0))/2, 'x0={0:.0f}'.format(x0), color=color)
+        plt.text(x1, min(f2(xs1)) + min(f2(xs1))/2, 'x1={0:.0f}'.format(x1), color=color)
+        if not list(xs0) or not list(xs1): return
+        plt.text(np.mean(xs0), max(f1(xs0)), 'm0={0:.2f}'.format(m0), color=color)
+        plt.text(np.mean(xs1), max(f2(xs1)), 'm1={0:.2f}'.format(m1), color=color)
+        plt.text(np.mean(xs2), max(f3(xs2)), 'm2={0:.2f}'.format(m2), color=color)
 
 def plot_threshes(df, res, elbs=None):
     durmap = make_durmap(df)
@@ -108,10 +109,11 @@ def plot_threshes(df, res, elbs=None):
         color = color_fcn(dotmode)
         plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
         plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
-        # plt.xlim([10, 10000])
-        # plt.ylim([0.01, 10])
         if dotmode in elbs:
-            # plot_elbow((xs, ys), elbs[dotmode]['fit'], color)
-            plot_two_elbows((xs, ys), elbs[dotmode]['fit'], color)
+            shown_pts = False
+            for th in elbs[dotmode]['fit']:
+                plot_two_elbows((xs, ys), th, color, shown_pts)
+                shown_pts = True
+            # plot_two_elbows((xs, ys), elbs[dotmode]['fit'], color)
     plot_info_threshes()
     plt.show()
