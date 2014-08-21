@@ -55,7 +55,7 @@ def plot_logistics(df, res):
         plot_info_pmf()
         plt.show()
 
-def plot_elbow((xs, ys), (x0, m0, b0, m1, b1), color):
+def plot_one_elbow(xs, (x0, m0, b0, m1, b1), color):
     x0 = np.exp(x0)
     f1 = lambda x: (x**m0)*np.exp(b0)
     f2 = lambda x: (x**m1)*np.exp(b1)
@@ -69,7 +69,7 @@ def plot_elbow((xs, ys), (x0, m0, b0, m1, b1), color):
     plt.text(np.mean(xs0), max(f1(xs0)), 'm={0:.2f}'.format(m0), color=color)
     plt.text(np.mean(xs1), max(f2(xs0)), 'm={0:.2f}'.format(m1), color=color)
 
-def plot_two_elbows((xs, ys), (x0, m0, b0, m1, b1, x1, m2, b2), color, show_text):
+def plot_two_elbows(xs, (x0, m0, b0, m1, b1, x1, m2, b2), color, show_text):
     x0 = np.exp(x0)
     x1 = np.exp(x1)
     f1 = lambda x: (x**m0)*np.exp(b0)
@@ -91,29 +91,28 @@ def plot_two_elbows((xs, ys), (x0, m0, b0, m1, b1, x1, m2, b2), color, show_text
         plt.text(np.mean(xs1), max(f2(xs1)), 'm1={0:.2f}'.format(m1), color=color)
         plt.text(np.mean(xs2), max(f3(xs2)), 'm2={0:.2f}'.format(m2), color=color)
 
-def plot_threshes(df, res, elbs=None):
-    durmap = make_durmap(df)
-    for dotmode, res1 in res.iteritems():
-        pts = []
-        for di, res0 in res1.iteritems():
-            pts.extend([(durmap[di], thresh) for theta, thresh in res0['fit']])
-        if not pts:
-            return
-        xs, ys = zip(*pts)
-        xs = 1000*np.array(xs)
+def plot_elbow(xs, df, color, show_text):
+    get_th = lambda keys: (df[key].values[0] for key in keys)
+    if 'm2' in df:
+        th = get_th(['x0', 'm0', 'b0', 'm1', 'b1', 'x1', 'm2', 'b2'])
+        plot_two_elbows(xs, th, color, show_text)
+    else:
+        th = get_th(['x0', 'm0', 'b0', 'm1', 'b1'])
+        plot_one_elbow(xs, th, color, show_text)
 
-        df = pd.DataFrame({'xs': xs, 'ys': ys})
-        df = df.groupby(xs)['ys'].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
-        xs, ys, yerrs = zip(*df.values)
-
+def plot_threshes(df_pts, df_elbs):
+    for dotmode, dfp in df_pts.groupby('dotmode'):
         color = color_fcn(dotmode)
-        plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
-        plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
-        if dotmode in elbs:
-            shown_pts = False
-            for th in elbs[dotmode]['fit']:
-                plot_two_elbows((xs, ys), th, color, shown_pts)
-                shown_pts = True
-            # plot_two_elbows((xs, ys), elbs[dotmode]['fit'], color)
+        show_text = True
+        for bi, dfpb in dfp.groupby('bi'):
+            dfc = dfpb.groupby('dur')['thresh'].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
+            xs, ys, yerrs = zip(*dfc.values)
+            plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
+            plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
+
+            dfe = df_elbs[(df_elbs['dotmode'] == dotmode) & (df_elbs['bi'] == bi)]
+            xsa = np.linspace(min(xs), max(xs))
+            plot_elbow(xsa, dfe, color, show_text)
+            show_text = False
     plot_info_threshes()
     plt.show()

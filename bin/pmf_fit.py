@@ -93,15 +93,16 @@ def main(ps, nbins, nboots, ignore_dur, doPlot, outdir, isLongDur, nElbows):
                 print '{0}, di={1}, d={2}ms, n={3}'.format(dotmode, di, label_fcn(1000*durmap[di]), len(df_durind))
                 res[dotmode][di] = threshold(df_durind, nboots)
     if not ignore_dur and nElbows > 0:
-        elbs = find_elbows_per_boots(df, res, nElbows)
+        df_elbs, df_pts = find_elbows_per_boots(df, res, nElbows)
         # elbs = find_elbows(df, res, nElbows)
     else:
-        elbs = {}
+        df_elbs = pd.DataFrame()
+        df_pts = pd.DataFrame()
     if doPlot and not ignore_dur:
         # plot_logistics(df, res)
-        plot_threshes(df, res, elbs)
+        plot_threshes(df_pts, df_elbs)
     if outdir is not None:
-        to_json(df, nbins, nboots, res, elbs, outdir, ignore_dur)
+        to_json(df, nbins, nboots, res, df_elbs, outdir, ignore_dur)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

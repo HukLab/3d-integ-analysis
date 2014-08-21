@@ -58,42 +58,16 @@ def find_two_elbows(xs, ys, ntries=10):
             return soln['x']
     return None
 
-# def find_elbows(df, res, nElbows):
-#     durmap = make_durmap(df)
-#     elbs = {}
-#     for dotmode, res1 in res.iteritems():
-#         elbs[dotmode] = {}
-#         pts = []
-#         for di, res0 in res1.iteritems():
-#             pts.extend([(durmap[di], thresh) for theta, thresh in res0['fit']])
-#         if not pts:
-#             return
-#         xs, ys = zip(*pts)
-#         xs = 1000*np.array(xs)
-#         if nElbows == 1:
-#             th = find_elbow(xs, ys)
-#         else:
-#             if dotmode == '3d':
-#                 print 'WARNING: Ignoring all 3D thresholds at x={0}'.format(xs[0])
-#                 xst = list(xs)
-#                 assert sorted(xst) == xst
-#                 last_instance_index = len(xst) - list(reversed(xst)).index(xst[0]) - 1
-#                 xs = xs[last_instance_index+1:]
-#                 ys = ys[last_instance_index+1:]
-#             th = find_two_elbows(xs, ys)
-#         elbs[dotmode]['fit'] = th
-#         elbs[dotmode]['binned'] = (xs, ys)
-#         print 'elbow={0}'.format(th)
-#     return elbs
-
 def find_elbows_one_boot(df, nElbows):
     xs, ys = zip(*df[['dur', 'thresh']].values)
     if nElbows == 1:
         th = find_elbow(xs, ys)
+        keys = ['x0', 'm0', 'b0', 'm1', 'b1']
     else:
         th = find_two_elbows(xs, ys)
+        keys = ['x0', 'm0', 'b0', 'm1', 'b1', 'x1', 'm2', 'b2']
     print 'elbow={0}'.format(th)
-    return th, (xs, ys)
+    return dict(zip(keys, th)) if th is not None else {}
 
 def df_res(df, res):
     durmap = make_durmap(df)
@@ -106,19 +80,16 @@ def df_res(df, res):
     return df
 
 def find_elbows_per_boots(df, res, nElbows):
-    elbs = {}
+    rows = []
     dfr = df_res(df, res)
     for dotmode, dfp in dfr.groupby('dotmode'):
-        ths = []
-        Pts = []
-        elbs[dotmode] = {}
         if dotmode == '3d':
             print 'WARNING: Ignoring all 3D thresholds at x={0}'.format(dfp['dur'].min())
             dfp = dfp[dfp['dur'] > dfp['dur'].min()]
         for bi, dfpts in dfp.groupby('bi'):
-            th, pts = find_elbows_one_boot(dfpts, nElbows)
-            ths.append(th)
-            Pts.append(pts)
-        elbs[dotmode]['fit'] = ths
-        elbs[dotmode]['binned'] = zip(*dfp[['dur', 'thresh']].values)
-    return elbs
+            row = find_elbows_one_boot(dfpts, nElbows)
+            row.update({'dotmode': dotmode, 'bi': bi})
+            rows.append(row)
+    dfE1 = pd.DataFrame(rows)
+    # dfE2 = dfr.rename(columns=lambda x: {'dur': 'x', 'thresh': 'y'}.get(x, x), inplace=False)
+    return dfE1, dfr
