@@ -143,7 +143,18 @@ def main(indir, outdir, outfile1, outfile2, keyword, old_sessions_file):
     compare_sessions_csv(old_sessions_file, CSV_SESSIONS_FILE)
 
 if __name__ == '__main__':
-    DATADIR = '/Volumes/LKCLAB/Users/Leor/2012-TemporalIntegration/runDots_KTZ_data'
+    """
+    e.g. for normalDur, longDur:
+        * python mat_io.py -f sessions-2.csv
+                           -g trials-2.csv
+                           -j ../data/sessions.csv
+        * python mat_io.py -i /Volumes/LKCLAB/Users/Leor/2012-TemporalIntegration/runDots_KTZ_data/longDur
+                           -f sessions-longDur-2.csv
+                           -g trials-longDur-2.csv
+                           -j ../data/sessions-longDur.csv
+                           -k longDur
+    """
+    DATADIR = '/Volumes/LKCLAB/Users/Leor/2012-TemporalIntegration/runDots_KTZ_data/normalDur'
     CURDIR = os.path.dirname(os.path.abspath(__file__))
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..', 'data'))
     OLD_SESSIONS_FILE = os.path.join(BASEDIR, 'sessions.csv')
