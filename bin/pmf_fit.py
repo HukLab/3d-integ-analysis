@@ -1,4 +1,3 @@
-import json
 import os.path
 import argparse
 import numpy as np
@@ -6,7 +5,6 @@ import pandas as pd
 import pypsignifit as psi
 
 from pd_io import load
-from sample import bootstrap
 from pmf_elbows import find_elbows_per_boots
 from pmf_plot import plot_logistics, plot_threshes, make_durmap, label_fcn, Finv
 
@@ -44,37 +42,6 @@ def threshold(dfc, nboots, thresh_val=THRESH_VAL):
         return pts, (theta, thresh), booted
     return pts, (theta, thresh), []
 
-def unique_fname(filename):
-    if not os.path.exists(filename):
-        return filename
-    i = 1
-    update_ofcn = lambda infile, i: infile.replace('.json', '-{0}.json'.format(i))
-    while os.path.exists(update_ofcn(filename, i)):
-        i += 1
-    return update_ofcn(filename, i)
-
-def to_json(df, nbins, nboots, res, elbs, outdir, ignore_dur):
-    class NumPyArangeEncoder(json.JSONEncoder):
-        def default(self, obj):
-            if isinstance(obj, np.ndarray):
-                return obj.tolist() # or map(int, obj)
-            return json.JSONEncoder.default(self, obj)
-            
-    subjs = df['subj'].unique()
-    subj = '{0}'.format(subjs[0].upper()) if len(subjs) == 1 else 'ALL'
-    ofcn = lambda label, subj, dotmode: 'pcorVsCohByDur_{label}-{subj}-{dotmode}-{nbins}.json'.format(label=label, subj=subj, dotmode=dotmode, nbins=nbins)
-    # ofcn = lambda label, subj, dotmode: 'pcorVsCohByDur_{label}-{subj}-{dotmode}.json'.format(label=label, subj=subj, dotmode=dotmode)
-    durmap = make_durmap(df)
-    for dotmode, res1 in res.iteritems():
-        obj = [{'di': di, 'dur': durmap[di], 'obj': res0} for di, res0 in res1.iteritems()]
-        json_outfile = os.path.join(outdir, ofcn('thresh' if not ignore_dur else 'thresh_by_dotmode', subj, dotmode))
-        with open(unique_fname(json_outfile), 'w') as f:
-            json.dump(obj, f, cls=NumPyArangeEncoder, indent=4)
-    for dotmode, obj in elbs.iteritems():
-        json_outfile = os.path.join(outdir, ofcn('elbow', subj, dotmode))
-        with open(unique_fname(json_outfile), 'w') as f:
-            json.dump(obj, f, cls=NumPyArangeEncoder, indent=4)
-
 def make_rows(df, dotmode, durmap, di, nboots):
     print '{0}, di={1}, d={2}ms, n={3}'.format(dotmode, di, label_fcn(1000*durmap[di]), len(df))
     rows1 = []
@@ -93,7 +60,27 @@ def make_rows(df, dotmode, durmap, di, nboots):
         rows2.append(row)
     return rows1, rows2
 
-def main(ps, nbins, nboots, ignore_dur, doPlot, outdir, isLongDur, nElbows):
+def unique_fname(filename):
+    if not os.path.exists(filename):
+        return filename
+    i = 1
+    update_ofcn = lambda infile, i: infile.replace('.csv', '-{0}.csv'.format(i))
+    while os.path.exists(update_ofcn(filename, i)):
+        i += 1
+    return update_ofcn(filename, i)
+
+def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
+    ofcn2 = lambda label, extra: 'pcorVsCohByDur_{label}-{subj}-{nbins}-{extra}.csv'.format(label=label, subj=subj, nbins=nbins, extra=extra)
+    ofcn1 = lambda label, extra: os.path.join(outdir, ofcn2(label, extra))
+    ofcn0 = lambda label, extra: unique_fname(ofcn1(label, extra))
+    of1 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'pts')
+    of2 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'params')
+    of3 = ofcn0('elbow', 'params')
+    df_pts.to_csv(of1)
+    df_fts.to_csv(of2)
+    df_elbs.to_csv(of3)
+
+def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
     durmap = make_durmap(df)
     rows1, rows2 = [], []
@@ -110,19 +97,22 @@ def main(ps, nbins, nboots, ignore_dur, doPlot, outdir, isLongDur, nElbows):
 
     df_pts = pd.DataFrame(rows1, columns=['subj', 'dotmode', 'di', 'dur', 'x', 'y', 'ntrials'])
     df_fts = pd.DataFrame(rows2, columns=['subj', 'dotmode', 'di', 'dur', 'bi', 'thresh', 'loc', 'scale', 'lapse'])
-    df_fts['subj'] = ps['subj']
     df_fts['dur'] = 1000*df_fts['dur']
     
     if not ignore_dur and nElbows > 0:
         df_elbs = find_elbows_per_boots(df_fts, nElbows)
     else:
         df_elbs = pd.DataFrame()
-    if doPlot and not ignore_dur:
+    if doPlotPmf and not ignore_dur:
         plot_logistics(df_pts, df_fts)
+    if doPlotElb and not ignore_dur:
         plot_threshes(df_fts, df_elbs)
     if outdir is not None:
-        pass
-        # to_json(df, nbins, nboots, res, df_elbs, outdir, ignore_dur)
+        subj = ps['subj'] if ps['subj'] is not None else 'ALL'
+        df_pts['subj'] = subj
+        df_fts['subj'] = subj
+        df_elbs['subj'] = subj
+        to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -131,11 +121,12 @@ if __name__ == '__main__':
     parser.add_argument('--durind', required=False, type=int)
     parser.add_argument('-b', '--nboots', required=False, type=int, default=0)
     parser.add_argument('-n', '--nbins', required=False, type=int, default=None)
-    parser.add_argument('--plot', action='store_true', default=False)
+    parser.add_argument('--plot-pmf', action='store_true', default=False)
+    parser.add_argument('--plot-elb', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('--ignore-dur', action='store_true', default=False)
     parser.add_argument('-e', '--n-elbows', type=int, default=1)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
-    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot, args.outdir, args.is_long_dur, args.n_elbows)
+    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows)
