@@ -21,9 +21,38 @@ from mle import pick_best_theta, generic_fit
 logging.basicConfig(level=logging.DEBUG)
 makefn = lambda outdir, subj, cond, name, ext: os.path.join(outdir, 'fitCurveVsDurByCoh-{0}-{1}{2}.{3}'.format(subj, cond, name, ext))
 
-def pickle_fit(results, bins, outfile, subj, dotmode):
+def write_csv(res, outdir):
+    a, b = [], []
+    subjs = set()
+    for (subj, dotmode), obj in res.iteritems():
+        subjs.add(subj)
+        for coh, vals in obj['fits']['binned_pcor'].iteritems():
+            coh = float(coh)
+            for di, (dur, xs) in enumerate(vals.iteritems()):
+                pc, se, n = xs
+                r1 = {'subj': subj, 'dotmode': dotmode, 'coh': coh, 'di': di, 'dur': dur, 'pc': pc, 'se': se, 'ntrials': n}
+                a.append(r1)
+        for coh, items in obj['fits']['sat-exp'].iteritems():
+            coh = float(coh)
+            for bi, th in enumerate(items):
+                r2 = {'subj': subj, 'dotmode': dotmode, 'bi': bi, 'coh': coh, 'A': th['A'], 'B': th['B'], 'T': th['T']}
+                b.append(r2)
+    subjs = list(subjs)
+    subj = subjs[0] if len(subjs) == 1 else 'AGG'
+    df1 = pd.DataFrame(a)
+    df2 = pd.DataFrame(b)
+    outfile1 = makefn(outdir, subj, '', '-pts', 'csv')
+    outfile2 = makefn(outdir, subj, '', '-params', 'csv')
+    df1.to_csv(outfile1)
+    df2.to_csv(outfile2)
+    return df1, df2
+
+def write_pickle_and_json(results, bins, outfile, subj, dotmode):
     """
     n.b. json output is just for human-readability; it's not invertible since numeric keys become str
+
+    SB1 = ['subj', 'dotmode', 'coh', 'di', 'dur', 'pc', 'se', 'ntrials']
+    SB2 = ['subj', 'dotmode', 'bi', 'coh', 'A', 'B', 'T']
     """
     out = {}
     out['fits'] = results['fits']
@@ -34,6 +63,7 @@ def pickle_fit(results, bins, outfile, subj, dotmode):
     out['dotmode'] = dotmode
     pickle.dump(out, open(outfile, 'w'))
     json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
+    return out
 
 def bootstrap_fit_curves(ts, fit_fcn, nboots):
     """
@@ -162,7 +192,7 @@ def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample
     else:
         results = fit(df, bins, fits_to_fit, nboots)
     outfile = makefn(outdir, subj, dotmode, '', 'pickle')
-    pickle_fit(results, bins, outfile, subj, dotmode)
+    return write_pickle_and_json(results, bins, outfile, subj, dotmode)
 
 def parse_outdir(outdir):
     """
@@ -174,15 +204,17 @@ def parse_outdir(outdir):
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     return os.path.join(BASEDIR, 'res', outdir)
     
-def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, bins=BINS):
-    df = load(ps)
+def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, isLongDur, bins=BINS):
+    df = load(args, None, 'both' if isLongDur else False)
     outdir = parse_outdir(outdir)
+    res = {}
     for dotmode, dfc in df.groupby('dotmode'):
         if is_agg_subj:
-            fit_and_write(dfc, AGG_SUBJ_NAME, dotmode, fits_to_fit, nboots, bins, outdir, resample=True)
+            res[('ALL', dotmode)] = fit_and_write(dfc, AGG_SUBJ_NAME, dotmode, fits_to_fit, nboots, bins, outdir, resample=True)
         else:
             for subj, dfc2 in dfc.groupby('subj'):
-                fit_and_write(dfc2, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False)
+                res[(subj, dotmode)] = fit_and_write(dfc2, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False)
+    write_csv(res, outdir)
 
 if __name__ == '__main__':
     ALL_FITS = FIT_FCNS.keys()
@@ -193,7 +225,8 @@ if __name__ == '__main__':
     parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
     parser.add_argument('-n', "--nboots", default=0, type=int, help="The number of bootstraps of fits")
     parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
+    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
-    main(ps, args.is_agg_subj, args.fits, args.nboots, args.outdir)
+    main(ps, args.is_agg_subj, args.fits, args.nboots, args.outdir, args.is_long_dur)

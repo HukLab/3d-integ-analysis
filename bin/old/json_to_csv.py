@@ -4,72 +4,6 @@ import glob
 import os.path
 import argparse
 
-# elbow
-E0 = ['subj', 'dotmode', 'x', 'y']
-E1 = ['subj', 'dotmode', 'x0', 'm0', 'b0', 'm1', 'b1']
-def parse_elbow(obj, subj, dotmode):
-    """
-    objs[dotmode] = {'binned': (xs, ys)}
-    objs[dotmode]['binned'] = (xs, ys)
-    objs[dotmode]['fit'] = (x0, m0, b0, m1, b1)
-    """
-    a, b = [], []
-
-    xsb, ysb = obj['binned']
-    for x, y, in zip(xsb, ysb):
-        r1 = {'subj': subj, 'dotmode': dotmode, 'x': x, 'y': y}
-        a.append(r1)
-
-    r2 = {'subj': subj, 'dotmode': dotmode}
-    r2.update(dict((k,v) for k,v in zip(['x0', 'm0', 'b0', 'm1', 'b1'], obj['fit'])))
-    b.append(r2)
-    return a, b
-
-# thresh -- n.b. (di, dur) will be empty if '_by_dotmode'
-T0 = ['subj', 'dotmode', 'di', 'dur', 'x', 'y', 'ntrials']
-T1 = ['subj', 'dotmode', 'di', 'dur', 'bi', 'thresh', 'loc', 'scale', 'lapse']
-def parse_thresh(obj, subj, dotmode, is_by_dotmode):
-    """
-    objs = [{'di': di, 'dur': durmap[di], 'obj': val}, ...]
-    val = {'binned': (xs, ys, zs), 'fit': [(theta, thresh), ...]}
-    """
-    a, b = [], []
-    obj_to_data = lambda ob: [ob['binned'][0], ob['binned'][1], ob['binned'][2], ob['fit']]
-
-    def make_rows(di, dur, val):
-        xsb, ysb, zsb, fits = obj_to_data(val)
-        r1 = [{'subj': subj, 'dotmode': dotmode, 'di': di, 'dur': dur, 'x': x, 'y': y, 'ntrials': z} for x, y, z in zip(xsb, ysb, zsb)]
-        r2 = [{'subj': subj, 'dotmode': dotmode, 'di': di, 'dur': dur, 'bi': bi, 'thresh': thresh, 'loc': theta[0], 'scale': theta[1], 'lapse': theta[2]} for bi, (theta, thresh) in enumerate(fits)]
-        a.extend(r1)
-        b.extend(r2)
-
-    for vals in obj:
-        di = vals['di']
-        dur = vals['dur']
-        make_rows(vals['di'] if is_by_dotmode else '', vals['dur'] if is_by_dotmode else '', vals['obj'])
-    return a, b
-
-# sat-exp-dotmode
-SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y']
-SA2 = ['subj', 'dotmode', 'A', 'B', 'T']
-def parse_sat_exp_dotmode(obj, subj, dotmode):
-    """
-    obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
-    """
-    a, b = [], []
-    xsb, ysb = obj['binned']['xs'], obj['binned']['ys']
-    xsf, ysf, th = [obj['fit'][key] for key in ['xs', 'ys', 'theta']]
-    assert len(th) == 3
-    for x, y in zip(xsb, ysb):
-        r1 = {'subj': subj, 'dotmode': dotmode, 'is_bin_or_fit': 'bin', 'x': x, 'y': y}
-        a.append(r1)
-    for x, y in zip(xsf, ysf):
-        r1 = {'subj': subj, 'dotmode': dotmode, 'is_bin_or_fit': 'fit', 'x': x, 'y': y}
-        a.append(r1)
-    r2 = {'subj': subj, 'dotmode': dotmode, 'A': th[0], 'B': th[1], 'T': th[2]}
-    b.append(r2)
-    return a, b
-
 # sat-exp
 SB1 = ['subj', 'dotmode', 'coh', 'di', 'dur', 'pc', 'se', 'ntrials']
 SB2 = ['subj', 'dotmode', 'bi', 'coh', 'A', 'B', 'T']
@@ -114,15 +48,7 @@ def parse_sat_exp(obj, subj, dotmode):
 def parse(infile, obj):
     dotmode = '2d' if '2d' in infile else '3d'
     subj = infile[infile.index(dotmode)-4:infile.index(dotmode)-1]
-    if 'elbow' in infile:
-        return parse_elbow(obj, subj, dotmode)
-    elif 'thresh_by_dotmode' in infile:
-        return parse_thresh(obj, subj, dotmode, False)
-    elif 'thresh' in infile:
-        return parse_thresh(obj, subj, dotmode, True)
-    elif 'pcorVsDur' in infile:
-        return parse_sat_exp_dotmode(obj, subj, dotmode)
-    elif 'fitCurve' in infile:
+    if 'fitCurve' in infile:
         return parse_sat_exp(obj, subj, dotmode)
     else:
         raise Exception("ERROR interpreting internal filetype.")

@@ -27,15 +27,10 @@ python pmf_fit.py -l -e $NELBOWS -n $NBINS_THRESH --nboots $NBOOTS_THRESH --outd
 # --------
 # by dotmode, SUBJ
 echo "SAT_EXP for $MODEL_SUBJ..."
-python pcorVsDurByCoh.py --subj $MODEL_SUBJ --fit --outdir $OUTDIR
+python pcorVsDurByCoh.py -l --subj $MODEL_SUBJ --fit --outdir $OUTDIR
 # by dotmode, ALL
 echo "SAT_EXP for ALL..."
-python pcorVsDurByCoh.py --fit --outdir $OUTDIR
+python pcorVsDurByCoh.py -l --fit --outdir $OUTDIR
 # by coherence, ALL, (2D, 3D)
 echo "SAT_EXP for ALL (2D, 3D)..."
-python fitCurveVsDurByCoh.py --is_agg_subj --fits sat-exp --nboots $NBOOTS_SAT_EXP --outdir $OUTDIR
-
-# JSON TO CSV
-# ------------
-echo "Converting .json data to .csv"
-python json_to_csv.py --indir $OUTDIR --outdir $OUTDIR
+python fitCurveVsDurByCoh.py -l --is_agg_subj --fits sat-exp --nboots $NBOOTS_SAT_EXP --outdir $OUTDIR

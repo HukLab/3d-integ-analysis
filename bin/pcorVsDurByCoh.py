@@ -49,12 +49,6 @@ def plot(args, isLongDur=False):
         plot_info(ax, title)
         plt.show()
 
-# def write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir):
-#     outfile = os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{dotmode}.json'.format(subj=subj, dotmode=dotmode))
-#     with open(outfile, 'w') as f:
-#         obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
-#         json.dump(obj, f)
-
 def prep_csv((xsp, ysp), (xs, ys, th)):
     """
     SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y']
