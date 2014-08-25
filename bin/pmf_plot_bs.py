@@ -86,13 +86,18 @@ def main(f1, f2, plot_fits=True, plot_res=False):
     dfres_med = residuals(df, dfmed)
     dfres_mean = residuals(df, dfmean)
     dfres_all = residuals(df, dfall)
+
+    for dm in ['2d', '3d']:
+        print (dfres_med[dfres_med['dotmode'] == dm]['resid']**2).sum()
+    1/0
+
     if plot_res:
         dfres_med.groupby('dotmode').plot('dur', 'resid', loglog=False, logx=True, kind='scatter')
         plt.title('median fit: residuals (all)')
         plt.show()
-        dfres_med[abs(dfres_med['resid']) < 0.3].groupby('dotmode').plot('dur', 'resid', loglog=False, logx=True, kind='scatter')
-        plt.title('median fit: residuals (less than 0.3)')
-        plt.show()
+        # dfres_med[abs(dfres_med['resid']) < 0.3].groupby('dotmode').plot('dur', 'resid', loglog=False, logx=True, kind='scatter')
+        # plt.title('median fit: residuals (less than 0.3)')
+        # plt.show()
         # dfres_mean[dfres_mean.dotmode == dm].plot('dur', 'resid', ax=plt.gca(), loglog=False, logx=True, kind='scatter', color='g')
         # dfres_all[dfres_all.dotmode == dm].plot('dur', 'resid', ax=plt.gca(), loglog=False, logx=True, kind='scatter', color='r')
         # plt.ylim([-0.1, 0.5])

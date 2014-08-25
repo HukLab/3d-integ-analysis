@@ -111,21 +111,21 @@ def default_filter_df(df):
     """
     good_subjects, bad_sessions, good_cohs
     """
-    # good_subjects
-    ffs = []
-    for dotmode, subjs in good_subjects.iteritems():
-        pred = (df['dotmode'] == dotmode) & (df['subj'].isin(subjs))
-        ffs.append(pred)
-    if ffs:
-        df = df[reduce(or_, ffs)]
-    # bad_sessions
-    ffs = []
-    for dotmode, lkp in bad_sessions.iteritems():
-        for subj, inds in lkp.iteritems():
-            pred = (df['subj'] == subj) & (df['dotmode'] == dotmode) & ~(df['number'].isin(inds))
-            ffs.append(pred)
-    if ffs:
-        df = df[reduce(or_, ffs)]
+    # # good_subjects
+    # ffs = []
+    # for dotmode, subjs in good_subjects.iteritems():
+    #     pred = (df['dotmode'] == dotmode) & (df['subj'].isin(subjs))
+    #     ffs.append(pred)
+    # if ffs:
+    #     df = df[reduce(or_, ffs)]
+    # # bad_sessions
+    # ffs = []
+    # for dotmode, lkp in bad_sessions.iteritems():
+    #     for subj, inds in lkp.iteritems():
+    #         pred = (df['subj'] == subj) & (df['dotmode'] == dotmode) & ~(df['number'].isin(inds))
+    #         ffs.append(pred)
+    # if ffs:
+    #     df = df[reduce(or_, ffs)]
     # good_cohs
     ffs = []
     for dotmode, inds in good_cohs.iteritems():
@@ -149,7 +149,7 @@ def load(args=None, filters=None, extraDataset=None, nbins=None):
         df = rebin(df, extraDataset, NBINS if nbins is None else nbins)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(args))
-    return default_filter_df(df) if extraDataset == False else df
+    return default_filter_df(df)
 
 def main(args, extraDataset=False, nbins=None):
     df = load(args, None, extraDataset, nbins)

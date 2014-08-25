@@ -5,13 +5,18 @@ from pmf_plot import make_durmap
 
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
 def find_elbow(xs, ys, ntries=10):
+    x0min = None
+    x0max = max(xs)/2.0
+    x0min = np.log(x0min) if x0min else x0min
+    x0max = np.log(x0max) if x0max else x0max
+
     zs = np.array([np.log(xs), np.log(ys)])
     xs, ys = zs[:, ~is_nan_or_inf(zs[0]) & ~is_nan_or_inf(zs[1])]
     def error_fcn((x0, A0, B0, A1, B1)):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1])
         yh = z[0]*z[1] + (1-z[0])*z[2]
         return np.sum(np.power(ys-yh, 2))
-    bounds = [(min(xs), max(xs)), (None, 0), (None, None), (None, 0), (None, None)]
+    bounds = [(x0min, x0max), (None, 0), (None, None), (None, 0), (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     guess = np.array([np.mean(xs), -1, 0, -0.5, 0])
     for i in xrange(ntries):

@@ -4,6 +4,7 @@ import argparse
 import itertools
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from pd_io import load
@@ -48,11 +49,37 @@ def plot(args, isLongDur=False):
         plot_info(ax, title)
         plt.show()
 
-def write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir):
-    outfile = os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{dotmode}.json'.format(subj=subj, dotmode=dotmode))
-    with open(outfile, 'w') as f:
-        obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
-        json.dump(obj, f)
+# def write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir):
+#     outfile = os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{dotmode}.json'.format(subj=subj, dotmode=dotmode))
+#     with open(outfile, 'w') as f:
+#         obj = {'binned': {'xs': list(xsp), 'ys': list(ysp)}, 'fit': {'xs': list(xs), 'ys': list(ys), 'theta': list(th)}}
+#         json.dump(obj, f)
+
+def prep_csv((xsp, ysp), (xs, ys, th)):
+    """
+    SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y']
+    SA2 = ['subj', 'dotmode', 'A', 'B', 'T']
+    """
+    df1 = pd.DataFrame({'xs': xsp, 'ys': ysp})
+    df1['is_bin_or_fit'] = 'bin'
+    dft = pd.DataFrame({'xs': xs, 'ys': ys})
+    dft['is_bin_or_fit'] = 'fit'
+    df1 = df1.append(dft)
+    df2 = pd.DataFrame({'theta': th})
+    return df1, df2
+
+def write_csv(res, subj, outdir):
+    d1, d2 = None, None
+    for dm, (df1, df2) in res.iteritems():
+        df1['dotmode'] = dm
+        df2['dotmode'] = dm
+        d1 = d1.append(df1) if d1 is not None else df1
+        d2 = d2.append(df2) if d2 is not None else df2
+    d1['subj'] = subj
+    d2['subj'] = subj
+    outfile_fcn = lambda kind: os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj))
+    d1.to_csv(outfile_fcn('pts'))
+    d2.to_csv(outfile_fcn('params'))
 
 def fit_curve(df, (dur0, dur1)):
     B = DEFAULT_THETA['sat-exp']['B']
@@ -69,6 +96,7 @@ def fit(args, outdir, isLongDur=False, plot=True):
     dur_rng = (min_dur, max_dur_longDur) if isLongDur else (min_dur, max_dur)
     subj = subj_label(df)
     durmap = durmap_fcn(df)
+    res = {}
     for dotmode, df_dotmode in df.groupby('dotmode'):
         xs, ys, th = fit_curve(df_dotmode, dur_rng)
         if not th:
@@ -84,7 +112,8 @@ def fit(args, outdir, isLongDur=False, plot=True):
             plt.scatter(xsp, ysp, color='g' if dotmode == '2d' else 'r')
             plt.plot(xs, ys, color='g' if dotmode == '2d' else 'r')
         if outdir:
-            write_json((xsp, ysp), (xs, ys, th), subj, dotmode, outdir)
+            res[dotmode] = prep_csv((xsp, ysp), (xs, ys, th))
+    write_csv(res, subj, outdir)
     if plot:
         # plt.xscale('log')
         plt.show()

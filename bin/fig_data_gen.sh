@@ -2,8 +2,9 @@
 
 OUTDIR=$1
 MODEL_SUBJ="krm"
-NBOOTS_THRESH=0
+NBOOTS_THRESH=1000
 NBOOTS_SAT_EXP=0
+NELBOWS=2
 
 # CREATE OUTDIR
 # ------------
@@ -14,13 +15,13 @@ mkdir -p $OUTDIR
 # -----------------
 # by dotmode, SUBJ
 echo "Psychometric function for $MODEL_SUBJ..."
-python pmf_fit.py --subj $MODEL_SUBJ --ignore-dur --nboots $NBOOTS_THRESH --outdir $OUTDIR
+python pmf_fit.py -l -e $NELBOWS -n $NBINS_THRESH --subj $MODEL_SUBJ --ignore-dur --nboots $NBOOTS_THRESH --outdir $OUTDIR
 # by dotmode, ALL
 echo "Psychometric function for ALL..."
-python pmf_fit.py --ignore-dur --nboots $NBOOTS_THRESH --outdir $OUTDIR
+python pmf_fit.py -l -e $NELBOWS -n $NBINS_THRESH --ignore-dur --nboots $NBOOTS_THRESH --outdir $OUTDIR
 # by duration, ALL, (2D, 3D)
 echo "Psychometric function for ALL (2D, 3D)..."
-python pmf_fit.py --nboots $NBOOTS_THRESH --outdir $OUTDIR
+python pmf_fit.py -l -e $NELBOWS -n $NBINS_THRESH --nboots $NBOOTS_THRESH --outdir $OUTDIR
 
 # SAT_EXP -- pcor vs dur
 # --------

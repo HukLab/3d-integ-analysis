@@ -70,7 +70,7 @@ def unique_fname(filename):
     return update_ofcn(filename, i)
 
 def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
-    ofcn2 = lambda label, extra: 'pcorVsCohByDur_{label}-{subj}-{nbins}-{extra}.csv'.format(label=label, subj=subj, nbins=nbins, extra=extra)
+    ofcn2 = lambda label, extra: 'pcorVsCohByDur_{label}-{subj}-{nbins}-{extra}.csv'.format(label=label, subj=subj.upper(), nbins=nbins, extra=extra)
     ofcn1 = lambda label, extra: os.path.join(outdir, ofcn2(label, extra))
     ofcn0 = lambda label, extra: unique_fname(ofcn1(label, extra))
     of1 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'pts')
@@ -86,7 +86,7 @@ def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur,
     rows1, rows2 = [], []
     for dotmode, df_dotmode in df.groupby('dotmode'):
         if ignore_dur:
-            r1, r2 = make_rows(df_dotmode, dotmode, durmap, di, nboots)
+            r1, r2 = make_rows(df_dotmode, dotmode, durmap, 0, nboots)
             rows1.extend(r1)
             rows2.extend(r2)
         else:
