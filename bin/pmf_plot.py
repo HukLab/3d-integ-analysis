@@ -98,7 +98,14 @@ def plot_elbow(xs, df, color, show_text):
         plot_one_elbow(xs, th, color, show_text)
 
 def plot_threshes(df_pts, df_elbs):
+    """
+    n.b. thresh and loc are basically the same; scale is similar; also a weird dependence on lapse
+
+    beautiful relation in 3d between scale and thresh, but not at all for 2d!
+        - 3d has huge thresh and scale values...
+    """
     for dotmode, dfp in df_pts.groupby('dotmode'):
+        th = minim2(dfp)
         color = color_fcn(dotmode)
         show_text = True
         for bi, dfpb in dfp.groupby('bi'):
@@ -106,10 +113,10 @@ def plot_threshes(df_pts, df_elbs):
             xs, ys, yerrs = zip(*dfc.values)
             plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
             plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
-
-            dfe = df_elbs[(df_elbs['dotmode'] == dotmode) & (df_elbs['bi'] == bi)]
-            xsa = np.linspace(min(xs), max(xs))
-            plot_elbow(xsa, dfe, color, show_text)
+            if not df_elbs.empty:
+                dfe = df_elbs[(df_elbs['dotmode'] == dotmode) & (df_elbs['bi'] == bi)]
+                xsa = np.linspace(min(xs), max(xs))
+                plot_elbow(xsa, dfe, color, show_text)
             show_text = False
     plot_info_threshes()
     plt.show()

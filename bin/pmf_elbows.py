@@ -40,7 +40,7 @@ def find_two_elbows(xs, ys, ntries=10):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1, xs > x1, xs*A2 + B2])
         yh = z[0]*z[1] + z[3]*z[4] + (1-z[0])*(1-z[3])*z[2]
         return (ys-yh).dot(ys-yh) # np.sum(np.power(ys-yh, 2))
-    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (x1min, x1max), (None, APPROX_ZERO), (None, None)]
+    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (x1min, x1max), (-APPROX_ZERO, APPROX_ZERO), (None, None)]
     # bounds = [(min(xs), max(xs)), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (min(xs), max(xs)), (None, APPROX_ZERO), (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     constraints.append({'type': 'eq', 'fun': lambda x: np.array([x[5]*(x[6] - x[3]) + x[7] - x[4]]) })
