@@ -6,7 +6,7 @@ from pmf_plot import make_durmap
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
 def find_elbow(xs, ys, ntries=10):
     x0min = None
-    x0max = max(xs)/2.0
+    x0max = None #max(xs)/2.0
     x0min = np.log(x0min) if x0min else x0min
     x0max = np.log(x0max) if x0max else x0max
 
@@ -16,7 +16,8 @@ def find_elbow(xs, ys, ntries=10):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1])
         yh = z[0]*z[1] + (1-z[0])*z[2]
         return np.sum(np.power(ys-yh, 2))
-    bounds = [(x0min, x0max), (None, 0), (None, None), (None, 0), (None, None)]
+    APPROX_ZERO = 0.0001
+    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (-APPROX_ZERO, APPROX_ZERO), (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     guess = np.array([np.mean(xs), -1, 0, -0.5, 0])
     for i in xrange(ntries):
@@ -74,12 +75,11 @@ def find_elbows_one_boot(df, nElbows):
     print 'elbow={0}'.format(th)
     return dict(zip(keys, th)) if th is not None else {}
 
-def find_elbows_per_boots(dfr, nElbows):
+def find_elbows_per_boots(dfr, nElbows, min_di=0):
     rows = []
     for dotmode, dfp in dfr.groupby('dotmode'):
-        if dotmode == '3d':
-            print 'WARNING: Ignoring all 3D thresholds at x={0}'.format(dfp['dur'].min())
-            dfp = dfp[dfp['dur'] > dfp['dur'].min()]
+        print 'WARNING: Ignoring all thresholds for durs below x={0}'.format(dfp[dfp['di'] == min_di]['dur'].min())
+        dfp = dfp[dfp['di'] >= min_di]
         for bi, dfpts in dfp.groupby('bi'):
             row = find_elbows_one_boot(dfpts, nElbows)
             row.update({'dotmode': dotmode, 'bi': bi})

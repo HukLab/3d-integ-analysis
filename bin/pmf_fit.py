@@ -75,10 +75,11 @@ def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
     ofcn0 = lambda label, extra: unique_fname(ofcn1(label, extra))
     of1 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'pts')
     of2 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'params')
-    of3 = ofcn0('elbow', 'params')
     df_pts.to_csv(of1)
     df_fts.to_csv(of2)
-    df_elbs.to_csv(of3)
+    if not ignore_dur:
+        of3 = ofcn0('elbow', 'params')
+        df_elbs.to_csv(of3)
 
 def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
@@ -120,7 +121,7 @@ if __name__ == '__main__':
     parser.add_argument("--dotmode", required=False, type=str, help="")
     parser.add_argument('--durind', required=False, type=int)
     parser.add_argument('-b', '--nboots', required=False, type=int, default=0)
-    parser.add_argument('-n', '--nbins', required=False, type=int, default=None)
+    parser.add_argument('-n', '--nbins', required=False, type=int, default=20)
     parser.add_argument('--plot-pmf', action='store_true', default=False)
     parser.add_argument('--plot-elb', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default=None)

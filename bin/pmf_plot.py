@@ -52,7 +52,7 @@ def plot_logistics(df_pts, df_fts):
         plot_info_pmf()
         plt.show()
 
-def plot_one_elbow(xs, (x0, m0, b0, m1, b1), color):
+def plot_one_elbow(xs, (x0, m0, b0, m1, b1), color, show_text):
     x0 = np.exp(x0)
     f1 = lambda x: (x**m0)*np.exp(b0)
     f2 = lambda x: (x**m1)*np.exp(b1)
@@ -61,10 +61,12 @@ def plot_one_elbow(xs, (x0, m0, b0, m1, b1), color):
     plt.plot(xs0, f1(xs0), color=color)
     plt.plot(xs1, f2(xs1), color=color)
     plt.axvline(x0, color=color, linestyle='--')
-    plt.text(x0, min(f1(xs0)) + min(f1(xs0))/2, 'x0={0:.0f}'.format(x0), color=color)
+    if show_text:
+        plt.text(x0, min(f1(xs0)) + min(f1(xs0))/2, 'x0={0:.0f}'.format(x0), color=color)
     if not list(xs0) or not list(xs1): return
-    plt.text(np.mean(xs0), max(f1(xs0)), 'm={0:.2f}'.format(m0), color=color)
-    plt.text(np.mean(xs1), max(f2(xs0)), 'm={0:.2f}'.format(m1), color=color)
+    if show_text:
+        plt.text(np.mean(xs0), max(f1(xs0)), 'm={0:.2f}'.format(m0), color=color)
+        plt.text(np.mean(xs1), max(f2(xs0)), 'm={0:.2f}'.format(m1), color=color)
 
 def plot_two_elbows(xs, (x0, m0, b0, m1, b1, x1, m2, b2), color, show_text):
     x0 = np.exp(x0)
@@ -105,7 +107,6 @@ def plot_threshes(df_pts, df_elbs):
         - 3d has huge thresh and scale values...
     """
     for dotmode, dfp in df_pts.groupby('dotmode'):
-        th = minim2(dfp)
         color = color_fcn(dotmode)
         show_text = True
         for bi, dfpb in dfp.groupby('bi'):

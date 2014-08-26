@@ -9,10 +9,10 @@ import pandas as pd
 
 from pd_io import load, resample_by_grp
 from sample import sample_wr, bootstrap, bootstrap_se
-from settings import DEFAULT_THETA, NBOOTS_BINNED_PS, FIT_IS_COHLESS, QUICK_FIT, THETAS_TO_FIT, AGG_SUBJ_NAME, BINS, min_dur, max_dur
+from settings import DEFAULT_THETA, NBOOTS_BINNED_PS, FIT_IS_COHLESS, QUICK_FIT, THETAS_TO_FIT, AGG_SUBJ_NAME, BINS, min_dur, max_dur, NBINS_COMBINED, NBINS
 
-import twin_limb
-import quick_1974
+# import twin_limb
+# import quick_1974
 import drift_diffuse
 import saturating_exponential
 from huk_tau_e import binned_ps, huk_tau_e
@@ -41,8 +41,8 @@ def write_csv(res, outdir):
     subj = subjs[0] if len(subjs) == 1 else 'AGG'
     df1 = pd.DataFrame(a)
     df2 = pd.DataFrame(b)
-    outfile1 = makefn(outdir, subj, '', '-pts', 'csv')
-    outfile2 = makefn(outdir, subj, '', '-params', 'csv')
+    outfile1 = makefn(outdir, subj, '', 'pts', 'csv')
+    outfile2 = makefn(outdir, subj, '', 'params', 'csv')
     df1.to_csv(outfile1)
     df2.to_csv(outfile2)
     return df1, df2
@@ -108,21 +108,21 @@ fit_wrapper = lambda x, y, z, w: (lambda ts, bins, coh, gs: generic_fit(x, y, z,
 FIT_FCNS = {
     'drift': fit_wrapper(drift_diffuse.fit, drift_diffuse.THETA_ORDER, THETAS_TO_FIT['drift'], DEFAULT_THETA['drift']),
     'drift-diff': fit_wrapper(drift_diffuse.fit_1, drift_diffuse.THETA_ORDER_1, THETAS_TO_FIT['drift-diff'], DEFAULT_THETA['drift-diff']),
-    'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
+    # 'quick_1974': fit_wrapper(quick_1974.fit, quick_1974.THETA_ORDER, THETAS_TO_FIT['quick_1974'], DEFAULT_THETA['quick_1974']),
     'sat-exp': fit_wrapper(saturating_exponential.fit, saturating_exponential.THETA_ORDER, THETAS_TO_FIT['sat-exp'], DEFAULT_THETA['sat-exp']),
-    'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
+    # 'twin-limb': fit_wrapper(twin_limb.fit, twin_limb.THETA_ORDER, THETAS_TO_FIT['twin-limb'], DEFAULT_THETA['twin-limb']),
     'huk': huk_fit,
 }
 
 def as_C_x_y(df):
-    vals = df[['coherence', 'duration', 'correct']].values
+    vals = df[['coherence', 'real_duration', 'correct']].values
     return np.array([([a, b], int(c)) for a,b,c in vals])
 
 def as_x_y(df):
-    vals = df[['duration', 'correct']].values
+    vals = df[['real_duration', 'correct']].values
     return np.array([(a, int(b)) for a,b in vals])
 
-durmap_fcn = lambda df: dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
+durmap_fcn = lambda df: dict(df.groupby('duration_index')['real_duration'].agg(min).reset_index().values)
 
 def fit(df, bins, fits_to_fit, nboots):
     cohs = sorted(df['coherence'].unique())
@@ -204,8 +204,10 @@ def parse_outdir(outdir):
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     return os.path.join(BASEDIR, 'res', outdir)
     
-def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, isLongDur, bins=BINS):
-    df = load(args, None, 'both' if isLongDur else False)
+def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, isLongDur):
+    df = load(ps, None, 'both' if isLongDur else False)
+    bins = list(df.groupby('duration_index', as_index=False).agg(min)['real_duration'].values)
+    bins.append(df['real_duration'].max())
     outdir = parse_outdir(outdir)
     res = {}
     for dotmode, dfc in df.groupby('dotmode'):

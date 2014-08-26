@@ -1,6 +1,7 @@
 .DS_Store
 *.pyc
-res/
-_old/
 *data.json
+_old/
+res/
 plots/
+fits/

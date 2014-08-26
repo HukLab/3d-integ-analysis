@@ -56,7 +56,7 @@ def residuals(df, dff):
     df2['resid'] = df2['thresh_x'] - df2['thresh_y']
     return df2
 
-def main(f1, f2, plot_fits=True, plot_res=False):
+def main(f1, f2, plot_fits=True, plot_hists=True, plot_res=False):
     df = pd.read_csv(f1)
     dff = pd.read_csv(f2)
     dff0 = dff[dff['bi']==0]
@@ -89,7 +89,16 @@ def main(f1, f2, plot_fits=True, plot_res=False):
 
     for dm in ['2d', '3d']:
         print (dfres_med[dfres_med['dotmode'] == dm]['resid']**2).sum()
-    1/0
+    # 1/0
+    if plot_hists:
+        dff.groupby('dotmode').hist('m0', bins=50)
+        plt.show()
+        dff.groupby('dotmode').hist('m1', bins=50)
+        plt.show()
+        dff.groupby('dotmode').plot('x0', 'm0', kind='scatter')
+        plt.show()
+        dff.groupby('dotmode').plot('x0', 'm1', kind='scatter')
+        plt.show()
 
     if plot_res:
         dfres_med.groupby('dotmode').plot('dur', 'resid', loglog=False, logx=True, kind='scatter')
@@ -104,8 +113,10 @@ def main(f1, f2, plot_fits=True, plot_res=False):
 
 if __name__ == '__main__':
     # indir = '../plots/tri-limb-free'
-    # indir = '../plots/tri-limb'
-    indir = '../plots/twin-limb'
+    indir = '../plots/tri-limb'
+    # indir = '../plots/tmp4'
+    # indir = '../plots/twin-limb-zero-drop2'
+    # indir = '../plots/twin-limb-zero'
     fn1 = 'pcorVsCohByDur_thresh-ALL-20-params.csv'
     fn2 = 'pcorVsCohByDur_elbow-ALL-20-params.csv'
     f1 = os.path.join(indir, fn1)
