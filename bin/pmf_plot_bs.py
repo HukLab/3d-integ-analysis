@@ -56,7 +56,19 @@ def residuals(df, dff):
     df2['resid'] = df2['thresh_x'] - df2['thresh_y']
     return df2
 
-def main(f1, f2, plot_fits=True, plot_hists=True, plot_res=False):
+def outfilei(outfile, i):
+    return outfile.replace('.', '-{0}.'.format(i))
+
+def show(outfile, i):
+    print i
+    if outfile:
+        plt.savefig(outfilei(outfile, i))
+    else:
+        plt.show()
+    return i+1
+
+def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=True):
+    I = 0
     df = pd.read_csv(f1)
     dff = pd.read_csv(f2)
     dff0 = dff[dff['bi']==0]
@@ -65,7 +77,7 @@ def main(f1, f2, plot_fits=True, plot_hists=True, plot_res=False):
     dfall = limb(df, dff0) # fit to all bootstrapped threshes
     dfmed = limb(df, dff1)
     dfmean = limb(df, dff2)
-    
+
     if plot_fits:
         plt.figure()
         df = df[df['thresh'] > 0]
@@ -75,7 +87,7 @@ def main(f1, f2, plot_fits=True, plot_hists=True, plot_res=False):
         # dfmean.groupby('dotmode').plot('dur', 'thresh', ax=plt.gca(), loglog=True)
         # dfall.groupby('dotmode').plot('dur', 'thresh', ax=plt.gca(), loglog=True)
         plt.title('median fit')
-        plt.show()
+        I = show(outfile, I)
 
     dff0['name'] = 'ALL'
     dff1['name'] = 'MEAN'
@@ -91,19 +103,29 @@ def main(f1, f2, plot_fits=True, plot_hists=True, plot_res=False):
         print (dfres_med[dfres_med['dotmode'] == dm]['resid']**2).sum()
     # 1/0
     if plot_hists:
-        dff.groupby('dotmode').hist('m0', bins=50)
-        plt.show()
-        dff.groupby('dotmode').hist('m1', bins=50)
-        plt.show()
-        dff.groupby('dotmode').plot('x0', 'm0', kind='scatter')
-        plt.show()
-        dff.groupby('dotmode').plot('x0', 'm1', kind='scatter')
-        plt.show()
+        for dotmode in ['2d', '3d']:
+            dff[dff['dotmode'] == dotmode].hist('m0', bins=50, color='g' if dotmode == '2d' else 'r')
+            plt.title('m0: ' + dotmode)
+            I = show(outfile, I)
+            dff[dff['dotmode'] == dotmode].hist('m1', bins=50, color='g' if dotmode == '2d' else 'r')
+            plt.title('m1: ' + dotmode)
+            I = show(outfile, I)
+            dff[dff['dotmode'] == dotmode].plot('x0', 'm0', kind='scatter', color='g' if dotmode == '2d' else 'r')
+            plt.title('x0, m0: ' + dotmode)
+            I = show(outfile, I)
+            dff[dff['dotmode'] == dotmode].plot('x0', 'm1', kind='scatter', color='g' if dotmode == '2d' else 'r')
+            plt.title('x0, m1: ' + dotmode)
+            I = show(outfile, I)
+            dff[dff['dotmode'] == dotmode].plot('m0', 'm1', kind='scatter', color='g' if dotmode == '2d' else 'r')
+            plt.title('m0, m1: ' + dotmode)
+            I = show(outfile, I)
 
     if plot_res:
-        dfres_med.groupby('dotmode').plot('dur', 'resid', loglog=False, logx=True, kind='scatter')
-        plt.title('median fit: residuals (all)')
-        plt.show()
+        for dotmode in ['2d', '3d']:
+            dfres_med[dfres_med['dotmode'] == dotmode].plot('dur', 'resid', loglog=False, logx=True, kind='scatter', color='g' if dotmode == '2d' else 'r')
+            plt.title('median fit: residuals: ' + dotmode)
+            I = show(outfile, I)
+
         # dfres_med[abs(dfres_med['resid']) < 0.3].groupby('dotmode').plot('dur', 'resid', loglog=False, logx=True, kind='scatter')
         # plt.title('median fit: residuals (less than 0.3)')
         # plt.show()
@@ -113,12 +135,18 @@ def main(f1, f2, plot_fits=True, plot_hists=True, plot_res=False):
 
 if __name__ == '__main__':
     # indir = '../plots/tri-limb-free'
-    indir = '../plots/tri-limb'
-    # indir = '../plots/tmp4'
-    # indir = '../plots/twin-limb-zero-drop2'
-    # indir = '../plots/twin-limb-zero'
-    fn1 = 'pcorVsCohByDur_thresh-ALL-20-params.csv'
-    fn2 = 'pcorVsCohByDur_elbow-ALL-20-params.csv'
-    f1 = os.path.join(indir, fn1)
-    f2 = os.path.join(indir, fn2)
-    main(f1, f2)
+    keys = ['tri-limb-zero']
+    # keys = ['tri-limb-free', 'twin-limb-free', 'tri-limb-zero', 'twin-limb-zero', 'twin-limb-zero-drop_two', 'twin-limb-drop_two']
+    for key in keys:
+        indir = '../plots/' + key
+        outdir = '../plots/figs/'
+        # indir = '../plots/tmp4'
+        # indir = '../plots/twin-limb-zero-drop2'
+        # indir = '../plots/twin-limb-zero'
+        fn1 = 'pcorVsCohByDur_thresh-ALL-20-params.csv'
+        fn2 = 'pcorVsCohByDur_elbow-ALL-20-params.csv'
+        gn1 = key + '.png'
+        f1 = os.path.join(indir, fn1)
+        f2 = os.path.join(indir, fn2)
+        g1 = os.path.abspath(os.path.join(outdir, gn1))
+        main(f1, f2, g1)

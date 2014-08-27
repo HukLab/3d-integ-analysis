@@ -108,14 +108,14 @@ def plot_threshes(df_pts, df_elbs):
     """
     for dotmode, dfp in df_pts.groupby('dotmode'):
         color = color_fcn(dotmode)
+        dfc = dfp.groupby('dur')['thresh'].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
+        xs, ys, yerrs = zip(*dfc.values)
+        plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
+        plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
         show_text = True
-        for bi, dfpb in dfp.groupby('bi'):
-            dfc = dfpb.groupby('dur')['thresh'].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
-            xs, ys, yerrs = zip(*dfc.values)
-            plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
-            plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)
-            if not df_elbs.empty:
-                dfe = df_elbs[(df_elbs['dotmode'] == dotmode) & (df_elbs['bi'] == bi)]
+        if not df_elbs.empty:
+            dfea = df_elbs[df_elbs['dotmode'] == dotmode]
+            for bi, dfe in dfea.groupby('bi'):
                 xsa = np.linspace(min(xs), max(xs))
                 plot_elbow(xsa, dfe, color, show_text)
             show_text = False

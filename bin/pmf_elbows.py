@@ -4,9 +4,11 @@ from scipy.optimize import minimize
 from pmf_plot import make_durmap
 
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
-def find_elbow(xs, ys, ntries=10):
+def find_elbow(xs, ys, enforceZeroSlope, ntries=10):
     x0min = None
-    x0max = None #max(xs)/2.0
+    x0max = max(xs)/2.0
+    print 'NOTE: ENFORCING ELBOW BOUNDS'
+    print 'min={0}, max={1}, x0=({2}, {3})'.format(min(xs), max(xs), x0min, x0max)
     x0min = np.log(x0min) if x0min else x0min
     x0max = np.log(x0max) if x0max else x0max
 
@@ -17,7 +19,12 @@ def find_elbow(xs, ys, ntries=10):
         yh = z[0]*z[1] + (1-z[0])*z[2]
         return np.sum(np.power(ys-yh, 2))
     APPROX_ZERO = 0.0001
-    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (-APPROX_ZERO, APPROX_ZERO), (None, None)]
+    if enforceZeroSlope:
+        m0min = -APPROX_ZERO
+    else:
+        m0min = None
+    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (m0min, APPROX_ZERO), (None, None)]
+    # bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (-APPROX_ZERO, APPROX_ZERO), (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     guess = np.array([np.mean(xs), -1, 0, -0.5, 0])
     for i in xrange(ntries):
@@ -26,7 +33,7 @@ def find_elbow(xs, ys, ntries=10):
             return soln['x']
     return None
 
-def find_two_elbows(xs, ys, ntries=10):
+def find_two_elbows(xs, ys, enforceZeroSlope, ntries=10):
     x0min = None #min(xs)
     x0max = max(xs)*1/3.0 # first 2000 ms
     x1min = None #max(xs)*1/4.0 #  last 2000 ms
@@ -41,13 +48,15 @@ def find_two_elbows(xs, ys, ntries=10):
     x0max = np.log(x0max) if x0max else x0max
     x1min = np.log(x1min) if x1min else x1min
     x1max = np.log(x1max) if x1max else x1max
-
     def error_fcn((x0, A0, B0, A1, B1, x1, A2, B2)):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1, xs > x1, xs*A2 + B2])
         yh = z[0]*z[1] + z[3]*z[4] + (1-z[0])*(1-z[3])*z[2]
         return (ys-yh).dot(ys-yh) # np.sum(np.power(ys-yh, 2))
-    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (x1min, x1max), (-APPROX_ZERO, APPROX_ZERO), (None, None)]
-    # bounds = [(min(xs), max(xs)), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (min(xs), max(xs)), (None, APPROX_ZERO), (None, None)]
+    if enforceZeroSlope:
+        m0min = -APPROX_ZERO
+    else:
+        m0min = None
+    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (x1min, x1max), (m0min, APPROX_ZERO), (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     constraints.append({'type': 'eq', 'fun': lambda x: np.array([x[5]*(x[6] - x[3]) + x[7] - x[4]]) })
     constraints.append({'type': 'ineq', 'fun': lambda x: np.array([x[5] - x[0]]) })
@@ -64,24 +73,36 @@ def find_two_elbows(xs, ys, ntries=10):
             return soln['x']
     return None
 
-def find_elbows_one_boot(df, nElbows):
+def find_elbows_one_boot(df, nElbows, enforceZeroSlope):
     xs, ys = zip(*df[['dur', 'thresh']].values)
     if nElbows == 1:
-        th = find_elbow(xs, ys)
+        th = find_elbow(xs, ys, enforceZeroSlope)
         keys = ['x0', 'm0', 'b0', 'm1', 'b1']
     else:
-        th = find_two_elbows(xs, ys)
+        th = find_two_elbows(xs, ys, enforceZeroSlope)
         keys = ['x0', 'm0', 'b0', 'm1', 'b1', 'x1', 'm2', 'b2']
     print 'elbow={0}'.format(th)
     return dict(zip(keys, th)) if th is not None else {}
 
-def find_elbows_per_boots(dfr, nElbows, min_di=0):
+def remove_first_few_di(df, min_di):
+    if min_di == 0:
+        return df
+    print 'WARNING: Ignoring all thresholds for durs below x={0}'.format(df[df['di'] == min_di]['dur'].min())
+    return df[df['di'] >= min_di]
+    
+def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
+    """
+    min_di ignores all durations where duration_index < min_di
+    enforceZeroSlope ensures that the last slope of all elbow fits is always 0
+    """
     rows = []
     for dotmode, dfp in dfr.groupby('dotmode'):
-        print 'WARNING: Ignoring all thresholds for durs below x={0}'.format(dfp[dfp['di'] == min_di]['dur'].min())
-        dfp = dfp[dfp['di'] >= min_di]
+        # if min_di < 2 and dotmode == '3d':
+        #     dfp = remove_first_few_di(dfp, 2)
+        # else:
+        #     dfp = remove_first_few_di(dfp, min_di)
         for bi, dfpts in dfp.groupby('bi'):
-            row = find_elbows_one_boot(dfpts, nElbows)
+            row = find_elbows_one_boot(dfpts, nElbows, enforceZeroSlope)
             row.update({'dotmode': dotmode, 'bi': bi})
             rows.append(row)
     return pd.DataFrame(rows)

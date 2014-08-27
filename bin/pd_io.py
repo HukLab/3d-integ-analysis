@@ -81,18 +81,18 @@ def rebin(df, extraDataset, N=10):
     bins = bins[1:]
     bins[-1] = dur1 + 0.01
     
-    if extraDataset == False:
-        """
-        as per leor: first 5 frames should be their own bin; after that, binned as per normal
-        so need to combine nf and bin_lkp somehow
-        """
-        raise Exception('IN THIS WEIRD PLACE AND I CANNOT GET OUT')
-        max_nframe_as_bin = 5
-        nf = sorted(nsigframes(df['real_duration']).unique().tolist())
+    # if extraDataset == False:
+    #     """
+    #     as per leor: first 5 frames should be their own bin; after that, binned as per normal
+    #     so need to combine nf and bin_lkp somehow
+    #     """
+    #     raise Exception('IN THIS WEIRD PLACE AND I CANNOT GET OUT')
+    #     max_nframe_as_bin = 5
+    #     nf = sorted(nsigframes(df['real_duration']).unique().tolist())
 
-        bins1 = df['real_duration'].unique().tolist()[:nf.index(max_nframe_as_bin+1)]
-        bins = bins1 + [b for b in bins if b > bins1[-1]]
-        bins = bins[1:]
+    #     bins1 = df['real_duration'].unique().tolist()[:nf.index(max_nframe_as_bin+1)]
+    #     bins = bins1 + [b for b in bins if b > bins1[-1]]
+    #     bins = bins[1:]
     bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)

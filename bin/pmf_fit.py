@@ -81,7 +81,7 @@ def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
         of3 = ofcn0('elbow', 'params')
         df_elbs.to_csv(of3)
 
-def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows):
+def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
     durmap = make_durmap(df)
     rows1, rows2 = [], []
@@ -101,7 +101,7 @@ def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur,
     df_fts['dur'] = 1000*df_fts['dur']
     
     if not ignore_dur and nElbows > 0:
-        df_elbs = find_elbows_per_boots(df_fts, nElbows)
+        df_elbs = find_elbows_per_boots(df_fts, nElbows, min_di, enforceZeroSlope)
     else:
         df_elbs = pd.DataFrame()
     if doPlotPmf and not ignore_dur:
@@ -128,6 +128,8 @@ if __name__ == '__main__':
     parser.add_argument('--ignore-dur', action='store_true', default=False)
     parser.add_argument('-e', '--n-elbows', type=int, default=1)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
+    parser.add_argument('--min-di', type=int, default=0)
+    parser.add_argument('--enforce-zero', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
-    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows)
+    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero)
