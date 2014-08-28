@@ -106,9 +106,10 @@ def plot_threshes(df_pts, df_elbs):
     beautiful relation in 3d between scale and thresh, but not at all for 2d!
         - 3d has huge thresh and scale values...
     """
+    YKEY = 'sens' # 'thresh'
     for dotmode, dfp in df_pts.groupby('dotmode'):
         color = color_fcn(dotmode)
-        dfc = dfp.groupby('dur')['thresh'].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
+        dfc = dfp.groupby('dur')[YKEY].agg([np.mean, lambda vs: np.std(vs, ddof=1)]).reset_index()
         xs, ys, yerrs = zip(*dfc.values)
         plt.scatter(xs, ys, marker='o', s=35, label=dotmode, color=color)
         plt.errorbar(xs, ys, yerr=yerrs, fmt=None, ecolor=color)

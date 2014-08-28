@@ -19,14 +19,13 @@ def find_elbow(xs, ys, enforceZeroSlope, ntries=10):
         yh = z[0]*z[1] + (1-z[0])*z[2]
         return np.sum(np.power(ys-yh, 2))
     APPROX_ZERO = 0.0001
+    slopeConstraint = (APPROX_ZERO, None)
+    lastSlopeConstraint = slopeConstraint
     if enforceZeroSlope:
-        m0min = -APPROX_ZERO
-    else:
-        m0min = None
-    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (m0min, APPROX_ZERO), (None, None)]
-    # bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (-APPROX_ZERO, APPROX_ZERO), (None, None)]
+        lastSlopeConstraint = (-APPROX_ZERO, APPROX_ZERO)
+    bounds = [(x0min, x0max), slopeConstraint, (None, None), lastSlopeConstraint, (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
-    guess = np.array([np.mean(xs), -1, 0, -0.5, 0])
+    guess = np.array([np.mean(xs), 1, 0, 0.5, 0])
     for i in xrange(ntries):
         soln = minimize(error_fcn, guess*(1 + i/10.), method='SLSQP', bounds=bounds, constraints=constraints)
         if soln['success']:
@@ -52,15 +51,15 @@ def find_two_elbows(xs, ys, enforceZeroSlope, ntries=10):
         z = np.array([xs < x0, xs*A0 + B0, xs*A1 + B1, xs > x1, xs*A2 + B2])
         yh = z[0]*z[1] + z[3]*z[4] + (1-z[0])*(1-z[3])*z[2]
         return (ys-yh).dot(ys-yh) # np.sum(np.power(ys-yh, 2))
+    slopeConstraint = (APPROX_ZERO, None)
+    lastSlopeConstraint = slopeConstraint
     if enforceZeroSlope:
-        m0min = -APPROX_ZERO
-    else:
-        m0min = None
-    bounds = [(x0min, x0max), (None, APPROX_ZERO), (None, None), (None, APPROX_ZERO), (None, None), (x1min, x1max), (m0min, APPROX_ZERO), (None, None)]
+        lastSlopeConstraint = (-APPROX_ZERO, APPROX_ZERO)
+    bounds = [(x0min, x0max), slopeConstraint, (None, None), slopeConstraint, (None, None), (x1min, x1max), lastSlopeConstraint, (None, None)]
     constraints = [{'type': 'eq', 'fun': lambda x: np.array([x[0]*(x[1] - x[3]) + x[2] - x[4]]) }]
     constraints.append({'type': 'eq', 'fun': lambda x: np.array([x[5]*(x[6] - x[3]) + x[7] - x[4]]) })
     constraints.append({'type': 'ineq', 'fun': lambda x: np.array([x[5] - x[0]]) })
-    guess = np.array([np.mean(xs), -1, 0.0, -0.5, 0.0, np.mean(xs)+0.5, 0.0, 0.0])
+    guess = np.array([np.mean(xs), 1, 0.0, 0.5, 0.0, np.mean(xs)+0.5, 0.0, 0.0])
     for i in xrange(ntries):
         soln = minimize(error_fcn, guess*(1 + i/10.), method='SLSQP', bounds=bounds, constraints=constraints)
         if soln['success']:
@@ -74,7 +73,8 @@ def find_two_elbows(xs, ys, enforceZeroSlope, ntries=10):
     return None
 
 def find_elbows_one_boot(df, nElbows, enforceZeroSlope):
-    xs, ys = zip(*df[['dur', 'thresh']].values)
+    YKEY = 'sens' # 'thresh'
+    xs, ys = zip(*df[['dur', YKEY]].values)
     if nElbows == 1:
         th = find_elbow(xs, ys, enforceZeroSlope)
         keys = ['x0', 'm0', 'b0', 'm1', 'b1']
@@ -85,7 +85,7 @@ def find_elbows_one_boot(df, nElbows, enforceZeroSlope):
     return dict(zip(keys, th)) if th is not None else {}
 
 def remove_first_few_di(df, min_di):
-    if min_di == 0:
+    if min_di <= 1:
         return df
     print 'WARNING: Ignoring all thresholds for durs below x={0}'.format(df[df['di'] == min_di]['dur'].min())
     return df[df['di'] >= min_di]
@@ -97,10 +97,10 @@ def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
     """
     rows = []
     for dotmode, dfp in dfr.groupby('dotmode'):
-        # if min_di < 2 and dotmode == '3d':
-        #     dfp = remove_first_few_di(dfp, 2)
-        # else:
-        #     dfp = remove_first_few_di(dfp, min_di)
+        if min_di < 2 and dotmode == '3d':
+            dfp = remove_first_few_di(dfp, 2)
+        else:
+            dfp = remove_first_few_di(dfp, min_di)
         for bi, dfpts in dfp.groupby('bi'):
             row = find_elbows_one_boot(dfpts, nElbows, enforceZeroSlope)
             row.update({'dotmode': dotmode, 'bi': bi})

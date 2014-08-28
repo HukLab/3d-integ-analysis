@@ -135,7 +135,7 @@ def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=True):
 
 if __name__ == '__main__':
     # indir = '../plots/tri-limb-free'
-    keys = ['tri-limb-zero']
+    keys = ['tri-limb-sens']
     # keys = ['tri-limb-free', 'twin-limb-free', 'tri-limb-zero', 'twin-limb-zero', 'twin-limb-zero-drop_two', 'twin-limb-drop_two']
     for key in keys:
         indir = '../plots/' + key
@@ -143,8 +143,8 @@ if __name__ == '__main__':
         # indir = '../plots/tmp4'
         # indir = '../plots/twin-limb-zero-drop2'
         # indir = '../plots/twin-limb-zero'
-        fn1 = 'pcorVsCohByDur_thresh-ALL-20-params.csv'
-        fn2 = 'pcorVsCohByDur_elbow-ALL-20-params.csv'
+        fn1 = 'pcorVsCohByDur_thresh-ALL-params.csv'
+        fn2 = 'pcorVsCohByDur_elbow-ALL-params.csv'
         gn1 = key + '.png'
         f1 = os.path.join(indir, fn1)
         f2 = os.path.join(indir, fn2)

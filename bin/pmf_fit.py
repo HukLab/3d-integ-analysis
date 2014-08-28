@@ -100,6 +100,8 @@ def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur,
     df_fts = pd.DataFrame(rows2, columns=['subj', 'dotmode', 'di', 'dur', 'bi', 'thresh', 'loc', 'scale', 'lapse'])
     df_fts['dur'] = 1000*df_fts['dur']
     
+    df_fts['sens'] = 1/df_fts['thresh']
+    
     if not ignore_dur and nElbows > 0:
         df_elbs = find_elbows_per_boots(df_fts, nElbows, min_di, enforceZeroSlope)
     else:
