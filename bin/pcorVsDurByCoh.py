@@ -59,7 +59,7 @@ def prep_csv((xsp, ysp), (xs, ys, th)):
     dft = pd.DataFrame({'xs': xs, 'ys': ys})
     dft['is_bin_or_fit'] = 'fit'
     df1 = df1.append(dft)
-    df2 = pd.DataFrame({'theta': th})
+    df2 = pd.DataFrame([{'A': th[0], 'B': th[1], 'T': th[2]}])
     return df1, df2
 
 def write_csv(res, subj, outdir):

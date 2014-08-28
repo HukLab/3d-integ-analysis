@@ -1,4 +1,3 @@
-import json
 import pickle
 import os.path
 import logging
@@ -28,7 +27,9 @@ def write_csv(res, outdir):
         subjs.add(subj)
         for coh, vals in obj['fits']['binned_pcor'].iteritems():
             coh = float(coh)
-            for di, (dur, xs) in enumerate(vals.iteritems()):
+            durs = sorted(vals.keys())
+            for di, dur in enumerate(durs):
+                xs = vals[dur]
                 pc, se, n = xs
                 r1 = {'subj': subj, 'dotmode': dotmode, 'coh': coh, 'di': di, 'dur': dur, 'pc': pc, 'se': se, 'ntrials': n}
                 a.append(r1)
@@ -47,10 +48,8 @@ def write_csv(res, outdir):
     df2.to_csv(outfile2)
     return df1, df2
 
-def write_pickle_and_json(results, bins, outfile, subj, dotmode):
+def write_pickle(results, bins, outfile, subj, dotmode):
     """
-    n.b. json output is just for human-readability; it's not invertible since numeric keys become str
-
     SB1 = ['subj', 'dotmode', 'coh', 'di', 'dur', 'pc', 'se', 'ntrials']
     SB2 = ['subj', 'dotmode', 'bi', 'coh', 'A', 'B', 'T']
     """
@@ -62,7 +61,6 @@ def write_pickle_and_json(results, bins, outfile, subj, dotmode):
     out['subj'] = subj
     out['dotmode'] = dotmode
     pickle.dump(out, open(outfile, 'w'))
-    json.dump(out, open(outfile.replace('.pickle', '.json'), 'w'), indent=4)
     return out
 
 def bootstrap_fit_curves(ts, fit_fcn, nboots):
@@ -178,7 +176,7 @@ def fit2(df, bins, fits_to_fit, nboots):
         msg = '{0}%: Found {1} trials'.format(int(coh*100), len(dfc))
         logging.info(msg)
         results['ntrials'][coh] = len(dfc)
-        results['fits']['binned_pcor'][coh] = binned_ps(as_x_y(df), bins, NBOOTS_BINNED_PS, include_se=True)
+        results['fits']['binned_pcor'][coh] = binned_ps(as_x_y(dfc), bins, NBOOTS_BINNED_PS, include_se=True)
         results['fits']['sat-exp'][coh] = fit_inner(dfc, B, nboots)
     return results
 
@@ -192,7 +190,7 @@ def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample
     else:
         results = fit(df, bins, fits_to_fit, nboots)
     outfile = makefn(outdir, subj, dotmode, '', 'pickle')
-    return write_pickle_and_json(results, bins, outfile, subj, dotmode)
+    return write_pickle(results, bins, outfile, subj, dotmode)
 
 def parse_outdir(outdir):
     """

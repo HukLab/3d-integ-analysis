@@ -13,7 +13,7 @@ GUESSES = {'A': A_GUESSES, 'B': B_GUESSES, 'T': T_GUESSES}
 BOUNDS = {'A': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'B': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'T': (0.0+APPROX_ZERO, None)}
 CONSTRAINTS = [] # [{'type': 'ineq', 'fun': lambda theta: theta[0] - theta[1]}] # A > B
 
-DEFAULT_DELAY = 0.0 # 0.03
+DEFAULT_DELAY = 0.03 # 0.03
 
 def saturating_exp(x, A, B, T, x0=DEFAULT_DELAY):
     """

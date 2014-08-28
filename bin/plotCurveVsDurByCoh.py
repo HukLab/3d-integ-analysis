@@ -12,8 +12,8 @@ from sample import bootstrap_se
 from fitCurveVsDurByCoh import makefn
 from settings import all_subjs, good_subjects, FIT_IS_COHLESS, LINESTYLE_MAP, COLOR_MAP, MARKER_MAP
 
-from twin_limb import twin_limb
-from quick_1974 import quick_1974
+# from twin_limb import twin_limb
+# from quick_1974 import quick_1974
 from saturating_exponential import saturating_exp
 from drift_diffuse import drift_diffusion, drift_diffusion_1, drift_diffusion_1b, drift_diffusion_2, drift_diffusion_2b
 
@@ -56,14 +56,15 @@ def pcor_curves(results, cohs, bins, subj, cond, outfile):
     # xs = np.linspace(min_dur, max_dur)
     xs = np.logspace(np.log10(min_dur), np.log10(max_dur))
     yf = lambda x, th: saturating_exp(x, th['A'], th['B'], th['T'])
-    yfB = lambda x, th: [twin_limb(x, th['X0'], th['S0'], th['P']) for x in xs]
+    # yfB = lambda x, th: [twin_limb(x, th['X0'], th['S0'], th['P']) for x in xs]
     yf1 = lambda xs, th: [drift_diffusion_1((C, x), th['K'], th['L'], th['X0']) for (C, x) in xs]
     yf1b = lambda xs, th: [drift_diffusion_2b(x, th['K'], th['L'], th['X0']) for x in xs]
     yf2 = lambda xs, th: [drift_diffusion((C, x), th['K'], th['X0']) for (C, x) in xs]
     yf22 = lambda xs, th: [drift_diffusion_2(x, th['K'], th['X0']) for x in xs]
-    yf2B = lambda xs, th: [quick_1974((C, x), th['A'], th['B']) for (C, x) in xs]
+    # yf2B = lambda xs, th: [quick_1974((C, x), th['A'], th['B']) for (C, x) in xs]
     # FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf22, 'quick_1974': yf2B}
-    FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'drift-diff': yf1, 'quick_1974': yf2B}
+    # FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'twin-limb': yfB, 'drift': yf2, 'drift-diff': yf1, 'quick_1974': yf2B}
+    FIT_FCNS = {'huk': yf, 'sat-exp': yf, 'drift': yf2, 'drift-diff': yf1}
 
     nrows = 3
     ncols = int((len(cohs)-0.5)/nrows)+1
