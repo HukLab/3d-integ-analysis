@@ -27,7 +27,12 @@ def load_trials(mat, session):
     if session is None:
         return []
     trials = []
-    for tr, coh, dirc, durIdx, dur, resp, crct in mat['D']:
+    data = mat['dv']['exp'][0,0]
+    keys = ['dir', 'coh', 'durIdx', 'dur', 'tr', 'response', 'correct']
+    data = [data[key][0,0] for key in keys]
+    data = [d.transpose()[0] if d.shape[0] > 1 else d[0] for d in data]
+    for dirc, coh, durIdx, dur, tr, resp, crct in zip(*data):
+    # for tr, coh, dirc, durIdx, dur, resp, crct in mat['D']:
         trial = Trial(session, tr, coh, dur, durIdx, dirc, resp, True if crct == 1 else False)
         trials.append(trial)
     return trials
@@ -116,23 +121,24 @@ def compare_sessions_csv(si1, si2):
         print r3
 
 def trials_to_csv(trials, sessions_file, trials_file):
-    ss = []
+    srs = []
+    s_row = lambda s: [s.subject, s.dotmode, s.index]
     t_str = lambda i, s_i, t: [i, s_i, t.index, t.coherence, t.duration, t.duration_index, t.direction, t.response, t.correct]
     with open(trials_file, 'wb') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(TRIALS_COLS)
         for i, t in enumerate(trials):
-            if t.session not in ss:
-                ss.append(t.session)
-            s_i = ss.index(t.session)
+            sr = s_row(t.session)
+            if sr not in srs:
+                srs.append(sr)
+            s_i = srs.index(sr)
             csvwriter.writerow(t_str(i+1, s_i+1, t))
 
-    s_str = lambda i, s: [i, s.subject, s.dotmode, s.index]
     with open(sessions_file, 'wb') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(SESSIONS_COLS)
-        for i, s in enumerate(ss):
-            csvwriter.writerow(s_str(i+1, s))
+        for i, sr in enumerate(srs):
+            csvwriter.writerow([i+1] + sr)
 
 def main(indir, outdir, outfile1, outfile2, keyword, old_sessions_file):
     CSV_SESSIONS_FILE = os.path.join(outdir, outfile1 + ('' if outfile1.endswith('.csv') else '.csv'))

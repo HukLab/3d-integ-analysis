@@ -38,7 +38,8 @@ def interpret_filters(args):
     if args is None:
         return filters
     for key, val in args.iteritems():
-        assert key in COLS
+        if key not in COLS:
+            continue
         if val is not None:
             filters.append(make_equal_filter(key, val))
     return filters
@@ -135,7 +136,7 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(args=None, filters=None, extraDataset=None, nbins=None):
+def load(ps=None, filters=None, extraDataset=None, nbins=None):
     if extraDataset == 'longDur':
         df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
         df = rebin(df, extraDataset, NBINS_longDur if nbins is None else nbins)
@@ -148,19 +149,28 @@ def load(args=None, filters=None, extraDataset=None, nbins=None):
         df = load_df()
         df = rebin(df, extraDataset, NBINS if nbins is None else nbins)
     fltrs = filters if filters is not None else []
-    df = filter_df(df, fltrs + interpret_filters(args))
+    df = filter_df(df, fltrs + interpret_filters(ps))
     return default_filter_df(df)
 
-def main(args, extraDataset=False, nbins=None):
-    df = load(args, None, extraDataset, nbins)
+def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None):
+    df = load(ps, None, 'both' if isLongDur else False, nbins)
     print df.head()
     print df.shape
-    plot(df)
+    if doPlot:
+        df0 = plot(df)
+        if outdir:
+            subjs = df['subj'].unique()
+            subj = subjs[0] if len(subjs) == 1 else 'ALL'
+            df0.to_csv(os.path.join(outdir, 'pcor-{0}-pts.csv').format(subj))
     return df
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     for col, typ in zip(COLS, COL_TYPES):
         parser.add_argument("--{0}".format(col), required=False, type=typ, help="{0}".format(col))
+    parser.add_argument('-n', '--nbins', required=False, type=int, default=20)
+    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
+    parser.add_argument('-p', '--plot', action='store_true', default=False)
+    parser.add_argument('-o', '--outdir', type=str, default=None)
     args = parser.parse_args()
-    main(vars(args))
+    main(vars(args), args.is_long_dur, args.nbins, args.plot, args.outdir)
