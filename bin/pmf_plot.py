@@ -52,6 +52,13 @@ def plot_logistics(df_pts, df_fts):
         plot_info_pmf()
         plt.show()
 
+def plot_line(xs, (m0, b0), color, show_text):
+    f = lambda x: (x**m0)*np.exp(b0)
+    xsf = np.linspace(min(xs), max(xs))
+    plt.plot(xsf, f(xsf), color=color)
+    if show_text:
+        plt.text(np.mean(xs), np.mean(f(xsf)), 'm0={0:.2f}'.format(m0), color=color)
+
 def plot_one_elbow(xs, (x0, m0, b0, m1, b1), color, show_text):
     x0 = np.exp(x0)
     f1 = lambda x: (x**m0)*np.exp(b0)
@@ -95,9 +102,12 @@ def plot_elbow(xs, df, color, show_text):
     if 'm2' in df:
         th = get_th(['x0', 'm0', 'b0', 'm1', 'b1', 'x1', 'm2', 'b2'])
         plot_two_elbows(xs, th, color, show_text)
-    else:
+    elif 'm1' in df:
         th = get_th(['x0', 'm0', 'b0', 'm1', 'b1'])
         plot_one_elbow(xs, th, color, show_text)
+    else:
+        th = get_th(['m0', 'b0'])
+        plot_line(xs, th, color, show_text)
 
 def plot_threshes(df_pts, df_elbs):
     """

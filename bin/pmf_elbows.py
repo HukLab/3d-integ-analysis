@@ -1,9 +1,17 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
+from scipy.stats import linregress
 from pmf_plot import make_durmap
 
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
+
+def find_line(xs, ys):
+    zs = np.array([np.log(xs), np.log(ys)])
+    xs, ys = zs[:, ~is_nan_or_inf(zs[0]) & ~is_nan_or_inf(zs[1])]
+    slope, intercept, r_value, p_value, std_err = linregress(xs, ys)
+    return np.array([slope, intercept])
+
 def find_elbow(xs, ys, enforceZeroSlope, ntries=10):
     x0min = None
     x0max = max(xs)/2.0
@@ -75,17 +83,20 @@ def find_two_elbows(xs, ys, enforceZeroSlope, ntries=10):
 def find_elbows_one_boot(df, nElbows, enforceZeroSlope):
     YKEY = 'sens' # 'thresh'
     xs, ys = zip(*df[['dur', YKEY]].values)
-    if nElbows == 1:
+    if nElbows == 0:
+        th = find_line(xs, ys)
+        keys = ['m0', 'b0']
+    elif nElbows == 1:
         th = find_elbow(xs, ys, enforceZeroSlope)
         keys = ['x0', 'm0', 'b0', 'm1', 'b1']
-    else:
+    elif nElbows == 2:
         th = find_two_elbows(xs, ys, enforceZeroSlope)
         keys = ['x0', 'm0', 'b0', 'm1', 'b1', 'x1', 'm2', 'b2']
     print 'elbow={0}'.format(th)
     return dict(zip(keys, th)) if th is not None else {}
 
 def remove_first_few_di(df, min_di):
-    if min_di <= 1:
+    if min_di < 2:
         return df
     print 'WARNING: Ignoring all thresholds for durs below x={0}'.format(df[df['di'] == min_di]['dur'].min())
     return df[df['di'] >= min_di]
@@ -97,10 +108,8 @@ def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
     """
     rows = []
     for dotmode, dfp in dfr.groupby('dotmode'):
-        if min_di < 2 and dotmode == '3d':
-            dfp = remove_first_few_di(dfp, 2)
-        else:
-            dfp = remove_first_few_di(dfp, min_di)
+        # always take out 3d's first di
+        dfp = remove_first_few_di(dfp, min_di if dotmode == '2d' else max(2, min_di))
         for bi, dfpts in dfp.groupby('bi'):
             row = find_elbows_one_boot(dfpts, nElbows, enforceZeroSlope)
             row.update({'dotmode': dotmode, 'bi': bi})
