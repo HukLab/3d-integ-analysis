@@ -106,7 +106,7 @@ def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur,
         df_elbs = find_elbows_per_boots(df_fts, nElbows, min_di, enforceZeroSlope)
     else:
         df_elbs = pd.DataFrame()
-    if doPlotPmf and not ignore_dur:
+    if doPlotPmf:
         plot_logistics(df_pts, df_fts)
     if doPlotElb and not ignore_dur:
         plot_threshes(df_fts, df_elbs)
@@ -122,6 +122,7 @@ if __name__ == '__main__':
     parser.add_argument("--subj", required=False, type=str, help="")
     parser.add_argument("--dotmode", required=False, type=str, help="")
     parser.add_argument('--durind', required=False, type=int)
+    parser.add_argument('--sessind', required=False, type=int)
     parser.add_argument('-b', '--nboots', required=False, type=int, default=0)
     parser.add_argument('-n', '--nbins', required=False, type=int, default=20)
     parser.add_argument('--plot-pmf', action='store_true', default=False)
@@ -133,5 +134,5 @@ if __name__ == '__main__':
     parser.add_argument('--min-di', type=int, default=0)
     parser.add_argument('--enforce-zero', action='store_true', default=False)
     args = parser.parse_args()
-    ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind}
+    ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind, 'session_index': args.sessind}
     main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero)

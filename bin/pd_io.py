@@ -99,7 +99,7 @@ def rebin(df, extraDataset, N=10):
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
     return df
 
-def resample_by_grp(df, mult, grp=('dotmode', 'subj')):
+def resample_by_grp(df, mult=5, grp=('dotmode', 'subj')):
     """
     resamples rows of each group in df
     """

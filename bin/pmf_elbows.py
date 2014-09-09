@@ -45,8 +45,8 @@ def find_two_elbows(xs, ys, enforceZeroSlope, ntries=10):
     x0max = max(xs)*1/3.0 # first 2000 ms
     x1min = None #max(xs)*1/4.0 #  last 2000 ms
     x1max = max(xs) - 200
-    print 'NOTE: ENFORCING ELBOW BOUNDS'
-    print 'min={0}, max={1}, x0=({2}, {3}), x1=({4}, {5})'.format(min(xs), max(xs), x0min, x0max, x1min, x1max)
+    # print 'NOTE: ENFORCING ELBOW BOUNDS'
+    # print 'min={0}, max={1}, x0=({2}, {3}), x1=({4}, {5})'.format(min(xs), max(xs), x0min, x0max, x1min, x1max)
 
     APPROX_ZERO = 0.0001
     zs = np.array([np.log(xs), np.log(ys)])
@@ -72,11 +72,11 @@ def find_two_elbows(xs, ys, enforceZeroSlope, ntries=10):
         soln = minimize(error_fcn, guess*(1 + i/10.), method='SLSQP', bounds=bounds, constraints=constraints)
         if soln['success']:
             th = soln['x']
-            print 'x0={0}'.format(th[0])
-            print 'x1={0}'.format(th[5])
-            print 'm0={0}, b0={1}'.format(th[1], th[2])
-            print 'm1={0}, b1={1}'.format(th[3], th[4])
-            print 'm2={0}, b2={1}'.format(th[6], th[7])
+            # print 'x0={0}'.format(th[0])
+            # print 'x1={0}'.format(th[5])
+            # print 'm0={0}, b0={1}'.format(th[1], th[2])
+            # print 'm1={0}, b1={1}'.format(th[3], th[4])
+            # print 'm2={0}, b2={1}'.format(th[6], th[7])
             return soln['x']
     return None
 
@@ -92,7 +92,7 @@ def find_elbows_one_boot(df, nElbows, enforceZeroSlope):
     elif nElbows == 2:
         th = find_two_elbows(xs, ys, enforceZeroSlope)
         keys = ['x0', 'm0', 'b0', 'm1', 'b1', 'x1', 'm2', 'b2']
-    print 'elbow={0}'.format(th)
+    # print 'elbow={0}'.format(th)
     return dict(zip(keys, th)) if th is not None else {}
 
 def remove_first_few_di(df, min_di):
