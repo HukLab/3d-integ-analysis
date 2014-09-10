@@ -87,9 +87,9 @@ def plot_two_elbows(xs, (x0, m0, b0, m1, b1, x1, m2, b2), color, show_text):
     plt.plot(xs0, f1(xs0), color=color)
     plt.plot(xs1, f2(xs1), color=color)
     plt.plot(xs2, f3(xs2), color=color)
-    plt.axvline(x0, color=color, linestyle='--')
-    plt.axvline(x1, color=color, linestyle='--')
     if show_text:
+        plt.axvline(x0, color=color, linestyle='--')
+        plt.axvline(x1, color=color, linestyle='--')
         plt.text(x0, min(f1(xs0)) + min(f1(xs0))/2, 'x0={0:.0f}'.format(x0), color=color)
         plt.text(x1, min(f2(xs1)) + min(f2(xs1))/2, 'x1={0:.0f}'.format(x1), color=color)
         if not list(xs0) or not list(xs1): return
@@ -129,6 +129,6 @@ def plot_threshes(df_pts, df_elbs):
             for bi, dfe in dfea.groupby('bi'):
                 xsa = np.linspace(min(xs), max(xs))
                 plot_elbow(xsa, dfe, color, show_text)
-            show_text = False
+                show_text = False
     plot_info_threshes()
     plt.show()
