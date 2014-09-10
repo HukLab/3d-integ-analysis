@@ -9,18 +9,35 @@ from matplotlib import pyplot as plt
 def load(min_dur=0.3, max_dur=1.2, min_coh=0.03, max_coh=0.5):
     fltrs = [pd_io.make_gt_filter('real_duration', min_dur), pd_io.make_lt_filter('real_duration', max_dur)]
     fltrs.extend([pd_io.make_gt_filter('coherence', min_coh), pd_io.make_lt_filter('coherence', max_coh)])
-    df = pd_io.load(None, fltrs, False)
-    df['isLongDur'] = False
-    df2 = pd_io.load(None, fltrs, True)
-    df2['isLongDur'] = True
-    df = df.append(df2)
-    return df
+    return pd_io.load(None, fltrs, 'both')
 
 def test(df, formula):
-    res = smf.glm(formula, df, family=sm.families.Binomial()).fit()
+    return smf.glm(formula, df, family=sm.families.Binomial()).fit()
     # res = smf.ols(formula, df).fit()
     # print res.summary()
-    return res
+
+def sample_wr(df, n):
+    return df.ix[np.random.choice(df.index.values, n)]
+
+def lrt(df, f0, f1, n=1000, N=100):
+    """
+    draw n samples with replacement from each isLongDur and is NormalDur
+    run likelihood ratio test comparing labeled model and unlabeled model
+    repeat N times
+    """
+    rs = []
+    llfs = []
+    dfA = df[df['isLongDur'] == 1]
+    dfB = df[df['isLongDur'] == 0]
+    for _ in xrange(N):
+        dfcA = sample_wr(dfA, n)
+        dfcB = sample_wr(dfB, n)
+        dfc = dfcA.append(dfcB)
+        l = test(dfc, f1).llf
+        l0 = test(dfc, f0).llf
+        llfs.append((l, l0))
+        rs.append(chisqprob(-2*np.log(l/l0), 2))
+    return rs, llfs
 
 def plot(df, res):
     df['mu'] = res.mu
@@ -31,15 +48,14 @@ def plot(df, res):
         plt.scatter(dfc['coherence'].unique(), dfc.groupby('coherence').mean()['correct'], s=25, color=colors[i])
     plt.show()
 
-"""
-TO DO:
-    * isLongDur should be interaction term. here's how:
+def main(method=1, takeLog=False):
+
+    """
+    isLongDur does interaction term for method==1. here's how:
         - use likelihood ratio test between two models:
             * one with two duration and two coherence weights
             * one with one duration and one coherence weight
-"""
-
-def main(method=1, takeLog=False):
+    """
     df = load()
     df['constant'] = 1
     df['correct'] = df['correct'].astype('float')
@@ -60,13 +76,11 @@ def main(method=1, takeLog=False):
         df['isNormalDur'] = 1 - df['isLongDur']
         formula = 'correct ~ isLongDur*duration + isLongDur*coherence + isNormalDur*duration + isNormalDur*coherence'
         for dotmode, df_dotmode in df.groupby('dotmode'):
-            res = test(df_dotmode, formula)
-            res0 = test(df_dotmode, formula0)
             print '-------'
             print dotmode
             print '-------'
-            print 'res0={0} -> res1={1}'.format(res0.llf, res.llf)
-            print 'Likelihood ratio test (isLongDur): p-value={0}'.format(chisqprob(-2*np.log(res.llf/res0.llf), 2))
+            rs, ls = lrt(df, formula0, formula)
+            print 'Likelihood ratio test (isLongDur): mean p-value={0}'.format(np.mean(rs))
     else:
         formula0 = 'correct ~  duration + coherence'
         formula = 'correct ~ isLongDur + duration + coherence'

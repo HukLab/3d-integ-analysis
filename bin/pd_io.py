@@ -95,6 +95,7 @@ def rebin(df, extraDataset, N=10):
     #     bins = bins1 + [b for b in bins if b > bins1[-1]]
     #     bins = bins[1:]
     bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
+    print df.loc[df['real_duration'] > dur1, :]
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
     return df
@@ -142,7 +143,9 @@ def load(ps=None, filters=None, extraDataset=None, nbins=None):
         df = rebin(df, extraDataset, NBINS_longDur if nbins is None else nbins)
     elif extraDataset == 'both':
         df = load_df()
+        df['isLongDur'] = False
         df2 = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
+        df2['isLongDur'] = True
         df = df.append(df2)
         df = rebin(df, extraDataset, NBINS_COMBINED if nbins is None else nbins)
     else:
