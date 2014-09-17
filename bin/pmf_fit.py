@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pypsignifit as psi
 
-from pd_io import load
+from pd_io import load, resample_by_grp
 from pmf_elbows import find_elbows_per_boots
 from pmf_plot import plot_logistics, plot_threshes, make_durmap, label_fcn, Finv
 
@@ -81,8 +81,10 @@ def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
         of3 = ofcn0('elbow', 'params')
         df_elbs.to_csv(of3)
 
-def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope):
+def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope, resample=None):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
+    if resample:
+        df = resample_by_grp(df, resample)
     durmap = make_durmap(df)
     rows1, rows2 = [], []
     for dotmode, df_dotmode in df.groupby('dotmode'):
@@ -130,9 +132,10 @@ if __name__ == '__main__':
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('--ignore-dur', action='store_true', default=False)
     parser.add_argument('-e', '--n-elbows', type=int, default=1)
+    parser.add_argument('-r', '--resample', type=int, default=0)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('--min-di', type=int, default=0)
-    parser.add_argument('--enforce-zero', action='store_true', default=False)
+    parser.add_argument('--enforce-zero', action='store_true', default=True)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind, 'session_index': args.sessind}
-    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero)
+    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero, args.resample)

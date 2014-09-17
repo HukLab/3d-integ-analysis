@@ -180,9 +180,9 @@ def fit2(df, bins, fits_to_fit, nboots):
         results['fits']['sat-exp'][coh] = fit_inner(dfc, B, nboots)
     return results
 
-def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False):
+def fit_and_write(df, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=None):
     if resample:
-        df = resample_by_grp(df, 5)
+        df = resample_by_grp(df, resample)
     msg = 'Loaded {0} trials for subject {1} and {2} dots'.format(len(df), subj, dotmode)
     logging.info(msg)
     if len(fits_to_fit) == 1 and 'sat-exp' in fits_to_fit:
@@ -202,7 +202,7 @@ def parse_outdir(outdir):
     BASEDIR = os.path.abspath(os.path.join(CURDIR, '..'))
     return os.path.join(BASEDIR, 'res', outdir)
     
-def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, isLongDur):
+def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, isLongDur, resample):
     df = load(ps, None, 'both' if isLongDur else False)
     bins = list(df.groupby('duration_index', as_index=False).agg(min)['real_duration'].values)
     bins.append(df['real_duration'].max())
@@ -210,10 +210,10 @@ def main(ps, is_agg_subj, fits_to_fit, nboots, outdir, isLongDur):
     res = {}
     for dotmode, dfc in df.groupby('dotmode'):
         if is_agg_subj:
-            res[('ALL', dotmode)] = fit_and_write(dfc, AGG_SUBJ_NAME, dotmode, fits_to_fit, nboots, bins, outdir, resample=True)
+            res[('ALL', dotmode)] = fit_and_write(dfc, AGG_SUBJ_NAME, dotmode, fits_to_fit, nboots, bins, outdir, resample=resample)
         else:
             for subj, dfc2 in dfc.groupby('subj'):
-                res[(subj, dotmode)] = fit_and_write(dfc2, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=False)
+                res[(subj, dotmode)] = fit_and_write(dfc2, subj, dotmode, fits_to_fit, nboots, bins, outdir, resample=resample)
     write_csv(res, outdir)
 
 if __name__ == '__main__':
@@ -221,6 +221,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', "--subj", type=str, help="Restrict fit to a single subject.")
     parser.add_argument('-d', "--dotmode", type=str, help="2D or 3D or (default:) both.")
+    parser.add_argument('-r', "--resample", type=int, default=0, help="")
     parser.add_argument('-a', '--is_agg_subj', action='store_true', default=False)
     parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
     parser.add_argument('-n', "--nboots", default=0, type=int, help="The number of bootstraps of fits")
@@ -229,4 +230,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
-    main(ps, args.is_agg_subj, args.fits, args.nboots, args.outdir, args.is_long_dur)
+    main(ps, args.is_agg_subj, args.fits, args.nboots, args.outdir, args.is_long_dur, args.resample)

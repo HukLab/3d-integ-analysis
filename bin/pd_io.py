@@ -159,8 +159,8 @@ def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
     print df.head()
     print df.shape
-    if doPlot:
-        df0 = plot(df)
+    if doPlot or outdir:
+        df0 = plot(df, doPlot)
         if outdir:
             subjs = df['subj'].unique()
             subj = subjs[0] if len(subjs) == 1 else 'ALL'

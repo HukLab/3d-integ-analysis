@@ -7,12 +7,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from pd_io import load
+from pd_io import load,  resample_by_grp
 from tools import color_list
 import saturating_exponential
 from settings import DEFAULT_THETA, min_dur, max_dur, min_dur_longDur, max_dur_longDur
 
 durmap_fcn = lambda df: dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
+colmap_fcn = lambda cohs, name="YlGnBu": dict((coh, col) for coh, col in zip([0]*2 + cohs, color_list(len(cohs) + 2, name)))
 
 def subj_label(df, default='ALL'):
     subjs = df['subj'].unique()
@@ -21,7 +22,7 @@ def subj_label(df, default='ALL'):
 def plot_inner(ax, df):
     durmap = dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
     cohs = sorted(df['coherence'].unique())
-    colmap = dict((coh, col) for coh, col in zip([0]*2 + cohs, color_list(len(cohs) + 2, "YlGnBu")))
+    colmap = colmap_fcn(cohs)
     for coh, df_coh in df.groupby('coherence'):
         isp, ysp = zip(*df_coh.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
         xsp = [durmap[i]*1000 for i in isp]
@@ -49,7 +50,7 @@ def plot(args, isLongDur=False):
         plot_info(ax, title)
         plt.show()
 
-def prep_csv((xsp, ysp), (xs, ys, th)):
+def prep_res((xsp, ysp), (xs, ys, th)):
     """
     SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y']
     SA2 = ['subj', 'dotmode', 'A', 'B', 'T']
@@ -62,18 +63,46 @@ def prep_csv((xsp, ysp), (xs, ys, th)):
     df2 = pd.DataFrame([{'A': th[0], 'B': th[1], 'T': th[2]}])
     return df1, df2
 
-def write_csv(res, subj, outdir):
+def finish_res(res, subj):
     d1, d2 = None, None
-    for dm, (df1, df2) in res.iteritems():
+    for (dm, coh), (df1, df2) in res.iteritems():
         df1['dotmode'] = dm
         df2['dotmode'] = dm
+        if coh is not None:
+            df1['coh'] = coh
+            df2['coh'] = coh
         d1 = d1.append(df1) if d1 is not None else df1
         d2 = d2.append(df2) if d2 is not None else df2
     d1['subj'] = subj
     d2['subj'] = subj
+    return d1, d2
+
+def write_csv(df1, df2, subj, outdir):
     outfile_fcn = lambda kind: os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj))
     d1.to_csv(outfile_fcn('pts'))
     d2.to_csv(outfile_fcn('params'))
+
+def plot_fit(df1, df2, collapseCoh):
+    def inner_fit(df, key, colmap):
+        for grp, dfc in df[df['is_bin_or_fit'] == 'bin'].groupby(key):
+            dfc.plot('xs', 'ys', kind='scatter', ax=plt.gca(), color=colmap[grp])
+        for grp, dfc in df[df['is_bin_or_fit'] == 'fit'].groupby(key):
+            dfc.plot('xs', 'ys', ax=plt.gca(), color=colmap[grp])
+        plt.xscale('log')
+        plt.ylim([0.4, 1.0])
+        plt.show()
+
+    if collapseCoh:
+        colmap = {'2d': 'g', '3d': 'r'}
+        inner_fit(df1, 'dotmode', colmap)
+    else:
+        cohs = sorted(df1['coh'].unique())
+        colmap = {}
+        for (dotmode, name) in [('2d', 'Greens'), ('3d', 'Reds')]:
+            items = [(dotmode, coh) for coh in cohs]
+            colmap.update(colmap_fcn(items, name))
+        for dm, dfc in df1.groupby('dotmode'):
+            inner_fit(dfc, ['dotmode', 'coh'], colmap)
 
 def fit_curve(df, (dur0, dur1)):
     B = DEFAULT_THETA['sat-exp']['B']
@@ -85,32 +114,37 @@ def fit_curve(df, (dur0, dur1)):
     sec_to_ms = lambda xs: [x*1000 for x in xs]
     return sec_to_ms(xs), ys, (A, B, T)
 
-def fit(args, outdir, isLongDur=False, plot=True):
+def fit_df(df, res, grp, dur_rng, durmap):
+    xs, ys, th = fit_curve(df, dur_rng)
+    if not th:
+        return (None, None), (None, None, None)
+    th = list(th)
+    # th[-1] += 30 # for delay
+    if not th:
+        print 'ERROR: No fits found.'
+    print grp, th
+
+    isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
+    xsp = [1000*durmap[i] for i in isp]
+    res[grp] = prep_res((xsp, ysp), (xs, ys, th))
+    return res
+
+def fit(args, outdir, collapseCoh=False, isLongDur=False, resample=None, plot=True):
     df = load(args, None, 'both' if isLongDur else False)
+    if resample:
+        df = resample_by_grp(df, resample)
     dur_rng = (min_dur, max_dur_longDur) if isLongDur else (min_dur, max_dur)
     subj = subj_label(df)
     durmap = durmap_fcn(df)
     res = {}
-    for dotmode, df_dotmode in df.groupby('dotmode'):
-        xs, ys, th = fit_curve(df_dotmode, dur_rng)
-        if not th:
-            print 'ERROR: No fits found.'
-            continue
-        th = list(th)
-        # th[-1] += 30 # for delay
-        print dotmode, th
-
-        isp, ysp = zip(*df_dotmode.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
-        xsp = [1000*durmap[i] for i in isp]
-        if plot:
-            plt.scatter(xsp, ysp, color='g' if dotmode == '2d' else 'r')
-            plt.plot(xs, ys, color='g' if dotmode == '2d' else 'r')
-        if outdir:
-            res[dotmode] = prep_csv((xsp, ysp), (xs, ys, th))
-    write_csv(res, subj, outdir)
+    for grp, df_dotmode in df.groupby('dotmode' if collapseCoh else ['dotmode', 'coherence']):
+        key = grp if len(grp) == 2 else (grp, None)
+        res = fit_df(df_dotmode, res, key, dur_rng, durmap)
+    df1, df2 = finish_res(res, subj)
+    if outdir:
+        write_csv(df1, df2, subj, outdir)
     if plot:
-        # plt.xscale('log')
-        plt.show()
+        plot_fit(df1, df2, collapseCoh)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -119,9 +153,11 @@ if __name__ == '__main__':
     parser.add_argument('--fit', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
+    parser.add_argument('--collapse-coh', action='store_true', default=False)
+    parser.add_argument('-r', '--resample', type=int, default=0)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
     if args.fit:
-        fit(ps, args.outdir, args.is_long_dur)
+        fit(ps, args.outdir, args.collapse_coh, args.is_long_dur, args.resample)
     else:
         plot(ps, args.is_long_dur)
