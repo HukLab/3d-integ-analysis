@@ -23,9 +23,9 @@ def plot_info_pmf():
     plt.ylim([0.4, 1.05])
 
 def plot_info_threshes():
-    plt.title('threshold vs. duration')
+    plt.title('sensitivity vs. duration')
     plt.xlabel('duration')
-    plt.ylabel('threshold')
+    plt.ylabel('sensitivity')
     # plt.xlim([0.0, 1.05])
     plt.xscale('log')
     plt.yscale('log')
@@ -33,8 +33,9 @@ def plot_info_threshes():
 
 def plot_pmf_with_data((xs, ys), theta, thresh, color, label):
     plt.scatter(xs, ys, color=color, label=label, marker='o')
-    xsc = np.linspace(min(xs), max(xs))
+    xsc = np.linspace(min(xs), 1.0)#max(xs))
     plt.axvline(thresh, color=color, linestyle='--')
+    plt.text(0.1, 0.5, ("thresh=%0.2f, lapse=%0.2f" % (thresh, theta[-1])))
     # if is_number(thresh):
     #     plt.text(thresh + 0.01, 0.5, 'threshold={0}%'.format(int(thresh*100)), color=color)
     ysf = F(xsc, theta)
@@ -42,15 +43,26 @@ def plot_pmf_with_data((xs, ys), theta, thresh, color, label):
 
 def plot_logistics(df_pts, df_fts):
     colmap = make_colmap(sorted(df_pts['di'].unique()))
+    vals = {}
     for dotmode, dfd in df_pts.groupby('dotmode'):
+        vals[dotmode] = []
         for di, dfp in dfd.groupby('di'):
             color = colmap[di]
             dff = df_fts[(df_fts['dotmode'] == dotmode) & (df_fts['di'] == di)]
             label = label_fcn(dff['dur'].values[0])
-            theta = [dff[key].values[0] for key in ['loc', 'scale', 'lapse']]
-            plot_pmf_with_data((dfp['x'], dfp['y']), theta, dff['thresh'].values[0], color, label)
+            theta = dff[['loc', 'scale', 'lapse']].dropna().mean().values
+            thresh = dff['thresh'].dropna().mean()
+            vals[dotmode].append((di, dfp[['x', 'y']].corr()['x']['y']))
+            # theta = [dff[key].values[0] for key in ['loc', 'scale', 'lapse']]
+            plot_pmf_with_data((dfp['x'], dfp['y']), theta, thresh, color, label)
         plot_info_pmf()
         plt.show()
+    for dotmode, vls in vals.iteritems():
+        plt.scatter(*zip(*vls), color='g' if dotmode == '2d' else 'r')
+        plt.title('correlation between coherence and percent correct')
+        plt.xlabel('duration index')
+        plt.ylabel('r')
+    plt.show()
 
 def plot_line(xs, (m0, b0), color, show_text):
     f = lambda x: (x**m0)*np.exp(b0)

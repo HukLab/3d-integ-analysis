@@ -95,11 +95,11 @@ def find_elbows_one_boot(df, nElbows, enforceZeroSlope):
     # print 'elbow={0}'.format(th)
     return dict(zip(keys, th)) if th is not None else {}
 
-def remove_first_few_di(df, min_di):
-    if min_di < 2:
+def remove_dis(df, bad_dis, dotmode):
+    if len(bad_dis) == 0:
         return df
-    print 'WARNING: Ignoring all thresholds for durs below x={0}'.format(df[df['di'] == min_di]['dur'].min())
-    return df[df['di'] >= min_di]
+    print 'WARNING: Ignoring all thresholds for {1} durations={0}'.format(df[df['di'].isin(bad_dis)]['dur'].unique(), dotmode)
+    return df[~df['di'].isin(bad_dis)]
     
 def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
     """
@@ -109,7 +109,12 @@ def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
     rows = []
     for dotmode, dfp in dfr.groupby('dotmode'):
         # always take out 3d's first di
-        dfp = remove_first_few_di(dfp, min_di if dotmode == '2d' else max(2, min_di))
+        # dfp.groupby('dur', as_index=False).agg(np.median)[['dur', 'thresh']]
+        tmp = dfp.groupby('di',as_index=False).agg(np.median)[['di','thresh']]
+        bad_dis = tmp[tmp['thresh'] > 0.7]['di'].values
+        dfp = remove_dis(dfp, range(max(bad_dis)), dotmode)
+        # dfp = remove_first_few_di(dfp, min_di if dotmode == '2d' else max(2, min_di))
+        # 1/0
         for bi, dfpts in dfp.groupby('bi'):
             row = find_elbows_one_boot(dfpts, nElbows, enforceZeroSlope)
             row.update({'dotmode': dotmode, 'bi': bi})

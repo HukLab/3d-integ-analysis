@@ -50,12 +50,12 @@ def plot(args, isLongDur=False):
         plot_info(ax, title)
         plt.show()
 
-def prep_res((xsp, ysp), (xs, ys, th)):
+def prep_res((xsp, ysp, zsp), (xs, ys, th)):
     """
-    SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y']
+    SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y', 'ntrials']
     SA2 = ['subj', 'dotmode', 'A', 'B', 'T']
     """
-    df1 = pd.DataFrame({'xs': xsp, 'ys': ysp})
+    df1 = pd.DataFrame({'xs': xsp, 'ys': ysp, 'ntrials': zsp})
     df1['is_bin_or_fit'] = 'bin'
     dft = pd.DataFrame({'xs': xs, 'ys': ys})
     dft['is_bin_or_fit'] = 'fit'
@@ -77,10 +77,14 @@ def finish_res(res, subj):
     d2['subj'] = subj
     return d1, d2
 
-def write_csv(df1, df2, subj, outdir):
-    outfile_fcn = lambda kind: os.path.join(outdir, 'pcorVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj))
-    d1.to_csv(outfile_fcn('pts'))
-    d2.to_csv(outfile_fcn('params'))
+def write_csv(df1, df2, subj, collapseCoh, outdir):
+    if collapseCoh:
+        key = lambda kind: 'pcorVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj)
+    else:
+        key = lambda kind: 'fitCurveVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj)
+    outfile_fcn = lambda kind: os.path.join(outdir, key(kind))
+    df1.to_csv(outfile_fcn('pts'))
+    df2.to_csv(outfile_fcn('params'))
 
 def plot_fit(df1, df2, collapseCoh):
     def inner_fit(df, key, colmap):
@@ -114,6 +118,14 @@ def fit_curve(df, (dur0, dur1)):
     sec_to_ms = lambda xs: [x*1000 for x in xs]
     return sec_to_ms(xs), ys, (A, B, T)
 
+def make_data(df, durmap):
+    dfc1 = df.groupby('duration_index', as_index=False)['correct'].agg([np.mean, len])['correct'].reset_index()
+    xs, ys, zs = zip(*dfc1[['duration_index','mean','len']].values)
+    xs = np.array([1000.0*durmap[i] for i in xs])
+    ys = np.array(ys).astype('float')
+    zs = np.array(zs)
+    return xs, ys, zs
+
 def fit_df(df, res, grp, dur_rng, durmap):
     xs, ys, th = fit_curve(df, dur_rng)
     if not th:
@@ -124,12 +136,13 @@ def fit_df(df, res, grp, dur_rng, durmap):
         print 'ERROR: No fits found.'
     print grp, th
 
-    isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
-    xsp = [1000*durmap[i] for i in isp]
-    res[grp] = prep_res((xsp, ysp), (xs, ys, th))
+    # isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
+    # xsp = [1000*durmap[i] for i in isp]
+    xsp, ysp, zsp = make_data(df, durmap)
+    res[grp] = prep_res((xsp, ysp, zsp), (xs, ys, th))
     return res
 
-def fit(args, outdir, collapseCoh=False, isLongDur=False, resample=None, plot=True):
+def fit(args, outdir, collapseCoh=False, isLongDur=False, resample=None, plot=False):
     df = load(args, None, 'both' if isLongDur else False)
     if resample:
         df = resample_by_grp(df, resample)
@@ -138,11 +151,11 @@ def fit(args, outdir, collapseCoh=False, isLongDur=False, resample=None, plot=Tr
     durmap = durmap_fcn(df)
     res = {}
     for grp, df_dotmode in df.groupby('dotmode' if collapseCoh else ['dotmode', 'coherence']):
-        key = grp if len(grp) == 2 else (grp, None)
+        key = grp if not collapseCoh else (grp, None)
         res = fit_df(df_dotmode, res, key, dur_rng, durmap)
     df1, df2 = finish_res(res, subj)
     if outdir:
-        write_csv(df1, df2, subj, outdir)
+        write_csv(df1, df2, subj, collapseCoh, outdir)
     if plot:
         plot_fit(df1, df2, collapseCoh)
 
@@ -151,6 +164,7 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--subj", required=False, type=str, help="")
     parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
     parser.add_argument('--fit', action='store_true', default=False)
+    parser.add_argument('--plot', action='store_true', default=False)
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('--collapse-coh', action='store_true', default=False)
@@ -158,6 +172,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
     if args.fit:
-        fit(ps, args.outdir, args.collapse_coh, args.is_long_dur, args.resample)
+        fit(ps, args.outdir, args.collapse_coh, args.is_long_dur, args.resample, args.plot)
     else:
         plot(ps, args.is_long_dur)

@@ -14,6 +14,7 @@ def find_theta_and_thresh(xs, ys, zs, thresh_val, nboots=0):
     data = np.array(zip(xs, ys, zs))
     a = "Gauss(0,5)"
     b = "Gauss(1,3)"
+    # l = "Beta(2,20)"
     l = "Beta(1.5,12)"
     B = psi.BootstrapInference(data, priors=[a, b, l], nafc=2, sample=nboots)
     thetas = B.mcestimates if B.mcestimates is not None else [B.estimate]
