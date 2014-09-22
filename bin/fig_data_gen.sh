@@ -18,7 +18,7 @@ mkdir -p $OUTDIR
 # by dotmode, SUBJ
 echo "Psychometric function for $MODEL_SUBJ..."
 python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --subj $MODEL_SUBJ --ignore-dur --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR
-by dotmode, ALL
+# by dotmode, ALL
 echo "Psychometric function for ALL..."
 python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --ignore-dur --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR
 # by duration, ALL, (2D, 3D)

@@ -15,8 +15,8 @@ def find_line(xs, ys):
 def find_elbow(xs, ys, enforceZeroSlope, ntries=10):
     x0min = None
     x0max = max(xs)/2.0
-    print 'NOTE: ENFORCING ELBOW BOUNDS'
-    print 'min={0}, max={1}, x0=({2}, {3})'.format(min(xs), max(xs), x0min, x0max)
+    # print 'NOTE: ENFORCING ELBOW BOUNDS'
+    # print 'min={0}, max={1}, x0=({2}, {3})'.format(min(xs), max(xs), x0min, x0max)
     x0min = np.log(x0min) if x0min else x0min
     x0max = np.log(x0max) if x0max else x0max
 

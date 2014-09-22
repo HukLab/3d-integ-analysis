@@ -153,6 +153,11 @@ def load(ps=None, filters=None, extraDataset=None, nbins=None):
         df = rebin(df, extraDataset, NBINS if nbins is None else nbins)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(ps))
+
+    # d2d = (df['dotmode'] == '2d') & (df['real_duration'] <= 983.0)
+    # d3d = (df['dotmode'] == '3d') & (df['real_duration'] <= 1894.0)
+    # df = df[d2d | d3d]
+
     return default_filter_df(df)
 
 def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None):
