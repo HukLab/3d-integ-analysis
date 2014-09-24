@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from pd_io import load,  resample_by_grp
-from tools import color_list
 import saturating_exponential
+from sample import bootstrap
+from tools import color_list
+from pd_io import load,  resample_by_grp
 from settings import DEFAULT_THETA, min_dur, max_dur, min_dur_longDur, max_dur_longDur
 
 durmap_fcn = lambda df: dict(df.groupby('duration_index')['duration'].agg(min).reset_index().values)
@@ -120,17 +121,26 @@ def make_data(df, durmap):
     return ds, xs, ys, zs
 
 def fit_curve(df, nboots, (dur0, dur1)):
+    """
+    uses median fit to generate pts on curve
+    """
     B = DEFAULT_THETA['sat-exp']['B']
-    A, T = saturating_exponential.fit_df(df, B)
-    if A is None:
-        return None, None, None
+    ths = []
+    for inds in bootstrap(df.index.values, nboots):
+        A, T = saturating_exponential.fit_df(df.ix[inds,:].copy().reset_index(), B)
+        if A is None:
+            th = (None, None, None)
+        else:
+            th = (A, B, T)
+        ths.append(th)
 
     vs = df.sort('real_duration')[['duration_index','real_duration']].drop_duplicates().values
     ds = vs[:,0]
     xs = vs[:,1]
+    A, B, T = np.median(np.array(ths), 0)
     ys = saturating_exponential.saturating_exp(xs, A, B, T)
     sec_to_ms = lambda xs: [x*1000 for x in xs]
-    return ds, sec_to_ms(xs), ys, [(A, B, T)]
+    return ds, sec_to_ms(xs), ys, ths
 
 def fit_df(df, nboots, res, grp, dur_rng, durmap):
     ds, xs, ys, ths = fit_curve(df, nboots, dur_rng)
@@ -140,7 +150,7 @@ def fit_df(df, nboots, res, grp, dur_rng, durmap):
     # ths[-1] += 30 # for delay
     if not ths:
         print 'ERROR: No fits found.'
-    print grp, ths
+    print grp, np.median(np.array(ths), 0)
 
     # isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
     # xsp = [1000*durmap[i] for i in isp]
