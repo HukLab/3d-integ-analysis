@@ -108,13 +108,10 @@ def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
     """
     rows = []
     for dotmode, dfp in dfr.groupby('dotmode'):
-        # always take out 3d's first di
-        # dfp.groupby('dur', as_index=False).agg(np.median)[['dur', 'thresh']]
-        tmp = dfp.groupby('di',as_index=False).agg(np.median)[['di','thresh']]
-        bad_dis = tmp[tmp['thresh'] > 0.7]['di'].values
-        dfp = remove_dis(dfp, range(max(bad_dis)), dotmode)
-        # dfp = remove_first_few_di(dfp, min_di if dotmode == '2d' else max(2, min_di))
-        # 1/0
+        if dotmode == '3d':
+            # always take out 3d's first two dis
+            # since pcor's correlation with duration is too weak to fit pmf
+            dfp = remove_dis(dfp, [1, 2], dotmode)
         for bi, dfpts in dfp.groupby('bi'):
             row = find_elbows_one_boot(dfpts, nElbows, enforceZeroSlope)
             row.update({'dotmode': dotmode, 'bi': bi})
