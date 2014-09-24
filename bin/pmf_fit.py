@@ -71,11 +71,12 @@ def unique_fname(filename):
     return update_ofcn(filename, i)
 
 def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
-    ofcn2 = lambda label, extra: 'pcorVsCohByDur_{label}-{subj}-{extra}.csv'.format(label=label, subj=subj.upper(), extra=extra)
+    key = 'pcorVsCohByDur' if not ignore_dur else 'pcorVsCohByDotmode'
+    ofcn2 = lambda label, extra: '{key}_{label}-{subj}-{extra}.csv'.format(key=key, label=label, subj=subj.upper(), extra=extra)
     ofcn1 = lambda label, extra: os.path.join(outdir, ofcn2(label, extra))
     ofcn0 = lambda label, extra: unique_fname(ofcn1(label, extra))
-    of1 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'pts')
-    of2 = ofcn0('thresh' if not ignore_dur else 'thresh_by_dotmode', 'params')
+    of1 = ofcn0('thresh', 'pts')
+    of2 = ofcn0('thresh', 'params')
     df_pts.to_csv(of1)
     df_fts.to_csv(of2)
     if not ignore_dur:

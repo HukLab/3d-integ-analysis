@@ -50,17 +50,20 @@ def plot(args, isLongDur=False):
         plot_info(ax, title)
         plt.show()
 
-def prep_res((xsp, ysp, zsp), (xs, ys, th)):
+def prep_res((dsp, xsp, ysp, zsp), (ds, xs, ys, ths)):
     """
     SA1 = ['subj', 'dotmode', 'is_bin_or_fit', 'x', 'y', 'ntrials']
     SA2 = ['subj', 'dotmode', 'A', 'B', 'T']
     """
-    df1 = pd.DataFrame({'xs': xsp, 'ys': ysp, 'ntrials': zsp})
+    df1 = pd.DataFrame({'di': dsp, 'xs': xsp, 'ys': ysp, 'ntrials': zsp})
     df1['is_bin_or_fit'] = 'bin'
-    dft = pd.DataFrame({'xs': xs, 'ys': ys})
+    dft = pd.DataFrame({'di': ds, 'xs': xs, 'ys': ys})
     dft['is_bin_or_fit'] = 'fit'
     df1 = df1.append(dft)
-    df2 = pd.DataFrame([{'A': th[0], 'B': th[1], 'T': th[2]}])
+    rows = []
+    for i, th in enumerate(ths):
+        rows.append({'A': th[0], 'B': th[1], 'T': th[2], 'bi': i})
+    df2 = pd.DataFrame(rows)
     return df1, df2
 
 def finish_res(res, subj):
@@ -79,9 +82,9 @@ def finish_res(res, subj):
 
 def write_csv(df1, df2, subj, collapseCoh, outdir):
     if collapseCoh:
-        key = lambda kind: 'pcorVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj)
+        key = lambda kind: 'pcorVsDurByDotmode-{subj}-{kind}.csv'.format(kind=kind, subj=subj)
     else:
-        key = lambda kind: 'fitCurveVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj)
+        key = lambda kind: 'pcorVsDurByCoh-{subj}-{kind}.csv'.format(kind=kind, subj=subj)
     outfile_fcn = lambda kind: os.path.join(outdir, key(kind))
     df1.to_csv(outfile_fcn('pts'))
     df2.to_csv(outfile_fcn('params'))
@@ -108,41 +111,44 @@ def plot_fit(df1, df2, collapseCoh):
         for dm, dfc in df1.groupby('dotmode'):
             inner_fit(dfc, ['dotmode', 'coh'], colmap)
 
-def fit_curve(df, (dur0, dur1)):
+def make_data(df, durmap):
+    dfc1 = df.groupby('duration_index', as_index=False)['correct'].agg([np.mean, len])['correct'].reset_index()
+    ds, ys, zs = zip(*dfc1[['duration_index','mean','len']].values)
+    xs = np.array([1000.0*durmap[i] for i in ds])
+    ys = np.array(ys).astype('float')
+    zs = np.array(zs)
+    return ds, xs, ys, zs
+
+def fit_curve(df, nboots, (dur0, dur1)):
     B = DEFAULT_THETA['sat-exp']['B']
     A, T = saturating_exponential.fit_df(df, B)
     if A is None:
         return None, None, None
-    xs = df.sort('real_duration')['real_duration'].unique() #np.logspace(np.log10(dur0), np.log10(dur1))
+
+    vs = df.sort('real_duration')[['duration_index','real_duration']].drop_duplicates().values
+    ds = vs[:,0]
+    xs = vs[:,1]
     ys = saturating_exponential.saturating_exp(xs, A, B, T)
     sec_to_ms = lambda xs: [x*1000 for x in xs]
-    return sec_to_ms(xs), ys, (A, B, T)
+    return ds, sec_to_ms(xs), ys, [(A, B, T)]
 
-def make_data(df, durmap):
-    dfc1 = df.groupby('duration_index', as_index=False)['correct'].agg([np.mean, len])['correct'].reset_index()
-    xs, ys, zs = zip(*dfc1[['duration_index','mean','len']].values)
-    xs = np.array([1000.0*durmap[i] for i in xs])
-    ys = np.array(ys).astype('float')
-    zs = np.array(zs)
-    return xs, ys, zs
-
-def fit_df(df, res, grp, dur_rng, durmap):
-    xs, ys, th = fit_curve(df, dur_rng)
-    if not th:
-        return (None, None), (None, None, None)
-    th = list(th)
-    # th[-1] += 30 # for delay
-    if not th:
+def fit_df(df, nboots, res, grp, dur_rng, durmap):
+    ds, xs, ys, ths = fit_curve(df, nboots, dur_rng)
+    if not ths:
+        return res
+    # ths = list(ths)
+    # ths[-1] += 30 # for delay
+    if not ths:
         print 'ERROR: No fits found.'
-    print grp, th
+    print grp, ths
 
     # isp, ysp = zip(*df.groupby('duration_index').agg(np.mean)['correct'].reset_index().values)
     # xsp = [1000*durmap[i] for i in isp]
-    xsp, ysp, zsp = make_data(df, durmap)
-    res[grp] = prep_res((xsp, ysp, zsp), (xs, ys, th))
+    dsp, xsp, ysp, zsp = make_data(df, durmap)
+    res[grp] = prep_res((dsp, xsp, ysp, zsp), (ds, xs, ys, ths))
     return res
 
-def fit(args, outdir, collapseCoh=False, isLongDur=False, resample=None, plot=False):
+def fit(args, outdir, nboots, collapseCoh=False, isLongDur=False, resample=None, plot=False):
     df = load(args, None, 'both' if isLongDur else False)
     if resample:
         df = resample_by_grp(df, resample)
@@ -152,7 +158,7 @@ def fit(args, outdir, collapseCoh=False, isLongDur=False, resample=None, plot=Fa
     res = {}
     for grp, df_dotmode in df.groupby('dotmode' if collapseCoh else ['dotmode', 'coherence']):
         key = grp if not collapseCoh else (grp, None)
-        res = fit_df(df_dotmode, res, key, dur_rng, durmap)
+        res = fit_df(df_dotmode, nboots, res, key, dur_rng, durmap)
     df1, df2 = finish_res(res, subj)
     if outdir:
         write_csv(df1, df2, subj, collapseCoh, outdir)
@@ -168,10 +174,11 @@ if __name__ == '__main__':
     parser.add_argument('--outdir', type=str, default=None)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('--collapse-coh', action='store_true', default=False)
+    parser.add_argument('-n', "--nboots", default=0, type=int, help="The number of bootstraps of fits")
     parser.add_argument('-r', '--resample', type=int, default=0)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
     if args.fit:
-        fit(ps, args.outdir, args.collapse_coh, args.is_long_dur, args.resample, args.plot)
+        fit(ps, args.outdir, args.nboots, args.collapse_coh, args.is_long_dur, args.resample, args.plot)
     else:
         plot(ps, args.is_long_dur)
