@@ -84,7 +84,8 @@ def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
         df_elbs.to_csv(of3)
 
 def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope, resample=None):
-    df = load(ps, None, 'both' if isLongDur else False, nbins)
+    secondElbow = (983.0, 1894.0)
+    df = load(ps, None, 'both' if isLongDur else False, nbins, secondElbow)
     if resample:
         df = resample_by_grp(df, resample)
     durmap = make_durmap(df)

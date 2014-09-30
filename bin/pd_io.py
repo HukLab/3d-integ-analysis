@@ -137,7 +137,7 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(ps=None, filters=None, extraDataset=None, nbins=None):
+def load(ps=None, filters=None, extraDataset=None, nbins=None, ignorePastSecondElbow=False):
     if extraDataset == 'longDur':
         df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
         df = rebin(df, extraDataset, NBINS_longDur if nbins is None else nbins)
@@ -154,9 +154,11 @@ def load(ps=None, filters=None, extraDataset=None, nbins=None):
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(ps))
 
-    # d2d = (df['dotmode'] == '2d') & (df['real_duration'] <= 983.0)
-    # d3d = (df['dotmode'] == '3d') & (df['real_duration'] <= 1894.0)
-    # df = df[d2d | d3d]
+    if ignorePastSecondElbow and len(ignorePastSecondElbow) == 2:
+        t2d, t3d = ignorePastSecondElbow
+        d2d = (df['dotmode'] == '2d') & (df['real_duration'] <= t2d)
+        d3d = (df['dotmode'] == '3d') & (df['real_duration'] <= t3d)
+        df = df[d2d | d3d]
 
     return default_filter_df(df)
 
