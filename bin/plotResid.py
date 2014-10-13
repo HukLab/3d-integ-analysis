@@ -48,15 +48,15 @@ def plot(df0a, df1a, df2a, dotmode, colorB):
     # colorB = [0.0, 0.7, 0.0]
     df['y1e'] = -(df['y1'] - df['mean'])/df['std']
     df['y2e'] = -(df['y2'] - df['mean'])/df['std']
-    plt.plot(df['dur'], df['y2e'], lw=lw, c=colorB, label='1-elb', zorder=4)
-    plt.plot(df['dur'], df['y1e'], lw=lw, c=colorA, label='2-elb', zorder=4)
-    plt.gca().fill_between(df['dur'], 0.0, df['y2e'], facecolor=colorB, alpha=0.6, zorder=3)
+    plt.plot(df['dur'], df['y2e'], lw=lw, c='k', zorder=4)
+    plt.plot(df['dur'], df['y1e'], lw=lw, c=colorA, zorder=4)
+    plt.gca().fill_between(df['dur'], 0.0, df['y2e'], facecolor=colorB, alpha=1.0, zorder=3)
     plt.gca().fill_between(df['dur'], 0.0, df['y1e'], facecolor=colorA, alpha=0.6, zorder=3)
-    plt.scatter(df['dur'], df['y2e'], sz, c=colorB, zorder=5)
-    plt.scatter(df['dur'], df['y1e'], sz, c=colorA, zorder=5)
+    plt.scatter(df['dur'], df['y2e'], sz, c=colorB, label='1-elb', zorder=5)
+    plt.scatter(df['dur'], df['y1e'], sz, c=colorA, label='2-elb', zorder=5)
 
     plt.plot([np.exp(ptA['x0']), np.exp(ptA['x0'])], [-30, 30], '--', lw=lw, c=colorA, zorder=1)
-    plt.plot([df['dur'].min(), df['dur'].max() + 50], [0, 0], '--', lw=lw, c='gray', zorder=1)
+    plt.plot([0.01, df['dur'].max() + 50], [0, 0], '-', lw=lw, c='k', zorder=1)
 
     # plt.plot(df['dur'], df['mean'])
     # plt.scatter(df['dur'], df['y1'], c='g')
@@ -64,14 +64,14 @@ def plot(df0a, df1a, df2a, dotmode, colorB):
     # plt.yscale('log')
     ys = np.hstack([df['y1e'].values, df['y2e'].values])
     plt.xscale('log')
-    plt.xlim(df['dur'].min()-2, df['dur'].max()+30)
-    plt.ylim(ys.min()-1, ys.max()+1)
+    # plt.xlim(df0a['dur'].min()-2, df['dur'].max()+30)
+    # plt.ylim(ys.min()-1, ys.max()+1)
     plt.xlabel('duration (msec)')
-    plt.ylabel('motion sensitivity')
+    plt.ylabel('motion sensitivity residual')
     leg = plt.legend(loc='upper left', prop={'size': 14})
     leg.get_frame().set_linewidth(1.5)
     xtcks = np.array([50, 100, 500])
-    xtcks = xtcks[xtcks >= df['dur'].min()]
+    # xtcks = xtcks[xtcks >= df['dur'].min()]
     plt.xticks(xtcks, xtcks)
 
     # formatting
@@ -87,12 +87,18 @@ def plot(df0a, df1a, df2a, dotmode, colorB):
         plt.gca().spines[axis].set_linewidth(0)
 
 def main():
+    yrng = (-17.0, 8.0)
+    xrng = (31.0, 1013.0)
     df0, df1, df2 = load()
     plot(df0, df1, df2, '2d', [0.0, 0.7, 0.0])
+    plt.xlim(xrng)
+    plt.ylim(yrng)
     # plt.show()
     plt.savefig('../plots/resid-2d.png')
     plt.clf()
     plot(df0, df1, df2, '3d', [0.7, 0.0, 0.0])
+    plt.xlim(xrng)
+    plt.ylim(yrng)
     # plt.show()
     plt.savefig('../plots/resid-3d.png')
 

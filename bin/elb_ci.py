@@ -41,7 +41,7 @@ def hists(df, keys=['m1'], nbins=100):
     fig = plt.figure()
     # ax = plt.gca()
     axs = [fig.add_subplot(2, 1, i+1) for i in range(2)] # for each dotmode
-    clrs = ['g','r']
+    clrs = [[0.0, 0.7, 0.0], [0.7, 0.0, 0.0]]
     # bins = np.linspace(df[keys].min().min(), df[keys].max().max(), nbins)
     bins = np.linspace(0.0, 1.0, nbins)
     ymx = 10.0
@@ -52,8 +52,10 @@ def hists(df, keys=['m1'], nbins=100):
         axs[i].set_xlim(min(bins), max(bins))
         axs[i].set_ylim(0.0, ymx)
         axs[i].grid(False)
-        axs[i].plot([0.3, 0.3], [0.0, ymx], '--k', lw=2, label='probability summation')
-        axs[i].plot([0.5, 0.5], [0.0, ymx], ':k', lw=2, label='perfect integration')
+        axs[i].plot([0.3, 0.3], [0.0, ymx], '--k', lw=3, alpha=0.4, label='probability summation')
+        axs[i].plot([0.5, 0.5], [0.0, ymx], '-k', lw=3, alpha=0.4, label='perfect integration')
+        # axs[i].plot([0.3, 0.3], [0.0, ymx], ':k', lw=2, label='probability summation')
+        # axs[i].plot([0.5, 0.5], [0.0, ymx], '--k', lw=2, label='perfect integration')
 
     leg = axs[-1].legend(loc='lower right', prop={'size': 14})
     leg.get_frame().set_linewidth(1.5)
