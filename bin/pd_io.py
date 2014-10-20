@@ -82,20 +82,8 @@ def rebin(df, extraDataset, N=10):
     bins = bins[1:]
     bins[-1] = dur1 + 0.01
     
-    # if extraDataset == False:
-    #     """
-    #     as per leor: first 5 frames should be their own bin; after that, binned as per normal
-    #     so need to combine nf and bin_lkp somehow
-    #     """
-    #     raise Exception('IN THIS WEIRD PLACE AND I CANNOT GET OUT')
-    #     max_nframe_as_bin = 5
-    #     nf = sorted(nsigframes(df['real_duration']).unique().tolist())
-
-    #     bins1 = df['real_duration'].unique().tolist()[:nf.index(max_nframe_as_bin+1)]
-    #     bins = bins1 + [b for b in bins if b > bins1[-1]]
-    #     bins = bins[1:]
     bin_lkp = lambda dur: next(i+1 for i, lbin in enumerate(bins + [dur1+1]) if dur < lbin)
-    print df.loc[df['real_duration'] > dur1, :]
+    # print df.loc[df['real_duration'] > dur1, :]
     df = df.loc[df['real_duration'] <= dur1, :].copy()
     df.loc[:, 'duration_index'] = df['real_duration'].map(bin_lkp)
     return df
@@ -113,22 +101,6 @@ def default_filter_df(df):
     """
     good_subjects, bad_sessions, good_cohs
     """
-    # # good_subjects
-    # ffs = []
-    # for dotmode, subjs in good_subjects.iteritems():
-    #     pred = (df['dotmode'] == dotmode) & (df['subj'].isin(subjs))
-    #     ffs.append(pred)
-    # if ffs:
-    #     df = df[reduce(or_, ffs)]
-    # # bad_sessions
-    # ffs = []
-    # for dotmode, lkp in bad_sessions.iteritems():
-    #     for subj, inds in lkp.iteritems():
-    #         pred = (df['subj'] == subj) & (df['dotmode'] == dotmode) & ~(df['number'].isin(inds))
-    #         ffs.append(pred)
-    # if ffs:
-    #     df = df[reduce(or_, ffs)]
-    # good_cohs
     ffs = []
     for dotmode, inds in good_cohs.iteritems():
         pred = (df['dotmode'] == dotmode) & (df['coherence'].isin(inds))
@@ -174,6 +146,42 @@ def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None):
             df0.to_csv(os.path.join(outdir, 'pcor-{0}-pts.csv').format(subj))
     return df
 
+def summarize():
+    def summary(df, key=['subj', 'dotmode', 'isLongDur']):
+        rows = []  
+        for k, dg in df.groupby(key, as_index=False):
+            tm = dg['session_index']
+            nts = []
+            for k1, dh in dg.groupby('session_index'):
+                nts.append(len(set(dh['trial_index'])))
+            v = '{0} - {1}'.format(min(nts), max(nts)) if min(nts) != max(nts) else str(min(nts))
+            row = list(k) + [len(set(tm.values)), len(tm), v]
+            rows.append(row)
+        return pd.DataFrame(rows, columns=key + ['# sessions', '# trials', '# trials/session'])
+
+    # data actually collected
+    df1 = load_df()
+    df1['isLongDur'] = False
+    dfA = summary(df1)
+    df2 = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
+    df2['isLongDur'] = True
+    dft = summary(df2)
+    dfA = dfA.append(dft)
+
+    # data used in analysis
+    df3 = load({}, None, 'both')
+    dfB = summary(df3)
+
+    # combine
+    key = ['isLongDur', 'subj', 'dotmode']
+    dfA = dfA.sort(key).reset_index()
+    dfB = dfB.sort(key).reset_index()
+    dfA['# trials analyzed'] = dfB['# trials']
+    dfA['# trials/session analyzed'] = dfB['# trials/session']
+    keys = ["# sessions", "# trials", "# trials analyzed", "# trials/session", "# trials/session analyzed"]
+    print dfA.set_index(key)[keys].to_csv()
+    print dfA.groupby('isLongDur')[keys].sum()
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     for col, typ in zip(COLS, COL_TYPES):
@@ -182,5 +190,9 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('-p', '--plot', action='store_true', default=False)
     parser.add_argument('-o', '--outdir', type=str, default=None)
+    parser.add_argument('-s', '--summarize', action='store_true', default=False)
     args = parser.parse_args()
-    main(vars(args), args.is_long_dur, args.nbins, args.plot, args.outdir)
+    if args.summarize:
+        summarize()
+    else:
+        main(vars(args), args.is_long_dur, args.nbins, args.plot, args.outdir)
