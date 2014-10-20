@@ -177,15 +177,15 @@ def fit(args, outdir, nboots, collapseCoh=False, isLongDur=False, resample=None,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--subj", required=False, type=str, help="")
-    parser.add_argument("-d", "--dotmode", required=False, type=str, help="")
-    parser.add_argument('--fit', action='store_true', default=False)
-    parser.add_argument('--plot', action='store_true', default=False)
-    parser.add_argument('--outdir', type=str, default=None)
-    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
-    parser.add_argument('--collapse-coh', action='store_true', default=False)
+    parser.add_argument('-s', "--subj", required=False, type=str, help="")
+    parser.add_argument('-d', "--dotmode", required=False, type=str, help="")
+    parser.add_argument('-l', "--is-long-dur", action='store_true', default=False)
+    parser.add_argument('-r', "--resample", type=int, default=0)
+    parser.add_argument('-f', "--fit", action='store_true', default=False)
     parser.add_argument('-n', "--nboots", default=0, type=int, help="The number of bootstraps of fits")
-    parser.add_argument('-r', '--resample', type=int, default=0)
+    parser.add_argument('-p', "--plot", action='store_true', default=False)
+    parser.add_argument('-o', "--outdir", type=str, default=None)
+    parser.add_argument("--collapse-coh", action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
     if args.fit:

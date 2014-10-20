@@ -35,7 +35,7 @@ echo "SAT_EXP for ALL..."
 python pcorVsDurByCoh.py -l --fit --collapse-coh -r $RESAMPLE --outdir $OUTDIR
 # by coherence, ALL, (2D, 3D)
 echo "SAT_EXP for ALL (2D, 3D)..."
-python fitCurveVsDurByCoh.py -l --is_agg_subj --fits sat-exp --nboots $NBOOTS_SAT_EXP -r $RESAMPLE --outdir $OUTDIR
+python pcorVsDurByCoh.py -l --fit  --nboots $NBOOTS_SAT_EXP -r $RESAMPLE --outdir $OUTDIR
 
 # echo "Psychometric function for $MODEL_SUBJ (2D, 3D)..."
 # python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --subj $MODEL_SUBJ --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR

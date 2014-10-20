@@ -221,12 +221,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', "--subj", type=str, help="Restrict fit to a single subject.")
     parser.add_argument('-d', "--dotmode", type=str, help="2D or 3D or (default:) both.")
+    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('-r', "--resample", type=int, default=0, help="")
     parser.add_argument('-a', '--is_agg_subj', action='store_true', default=False)
     parser.add_argument('-f', "--fits", default=ALL_FITS, nargs='*', choices=ALL_FITS, type=str, help="The fitting methods you would like to use, from: {0}".format(ALL_FITS))
     parser.add_argument('-n', "--nboots", default=0, type=int, help="The number of bootstraps of fits")
     parser.add_argument('-o', "--outdir", required=True, type=str, help="The directory to which fits will be written.")
-    parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     args = parser.parse_args()
     
     ps = {'subj': args.subj, 'dotmode': args.dotmode}
