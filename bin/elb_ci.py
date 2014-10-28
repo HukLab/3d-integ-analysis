@@ -15,26 +15,35 @@ matplotlib.rc('lines', linewidth=lw)
 
 basedir = '../fits'
 
+def load_thresh(key):
+    f = 'pcorVsCohBy{0}_thresh-ALL-params.csv'.format(key.capitalize())
+    return pd.read_csv(os.path.join(basedir, f))
+
 def load_elb(key, no=''):
     f = 'pcorVsCohByDur_{0}elbow-ALL-params{1}.csv'.format(key, no)
     return pd.read_csv(os.path.join(basedir, f))
 
 lbf = lambda pct: (1.0-pct)/2.0
-def elb_ci(df, pct=0.682):
+
+def ci(df, grpkeys=['dotmode'], pct=0.682):
     qs = [lbf(pct), 1-lbf(pct)]
     assert sorted(qs) == qs and len(qs) == 2
-    dg = df.groupby('dotmode').quantile(qs + [0.5])
-    for k2 in ['2d', '3d']:
+    dg = df.groupby(grpkeys).quantile(qs + [0.5])
+    for k2 in sorted(df.groupby(grpkeys).groups.keys()):
         print '--------'
-        print k2.upper()
+        print str(k2).upper()
         print '--------'
         for k1 in dg.keys():
-            if 'Unnamed' in k1 or 'bi' == k1 or 'm2' == k1:
+            if 'Unnamed' in k1 or k1 in ['bi', 'm2']:
                 continue
             xs = np.array([dg[k1][k2][0.5], dg[k1][k2][qs[0]], dg[k1][k2][qs[1]]])
-            if k1 == 'x0' or k1 == 'x1':
+            unt = ''
+            if k1[0] in ['b', 'x']:
                 xs = np.exp(xs)
-            print '{0}: median = {2:.2f}, {5:.0f}% C.I. = ({3:.2f}, {4:.2f})'.format(k1, k2, xs[0], xs[1], xs[2], 100*pct)
+                unt = ' msec'
+            if k1 in ['thresh']:
+                xs = 100*xs
+            print '{0}: median = {2:.2f}{6}, {5:.0f}% C.I. = ({3:.2f}, {4:.2f})'.format(k1, k2, xs[0], xs[1], xs[2], 100*pct, unt)
 
 def hists(df, keys=['m1'], nbins=100):
     print 'fits from {0} bootstraps'.format(df['bi'].max())
@@ -85,5 +94,6 @@ def hists(df, keys=['m1'], nbins=100):
     plt.show()
 
 if __name__ == '__main__':
-    hists(load_elb(''))
-    # elb_ci(load_elb(''))
+    # hists(load_elb(''))
+    # ci(load_elb(''))
+    ci(load_thresh('Dur'), ['dotmode', 'di'])

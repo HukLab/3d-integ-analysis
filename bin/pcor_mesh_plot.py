@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 def make_surface(xs, ys, zs, resX=50, resY=50):
     xi = np.linspace(min(xs), max(xs), resX)
     yi = np.linspace(min(ys), max(ys), resY)
-    Z = griddata(xs, ys, zs, xi, yi, interp='linear')
+    Z = griddata(xs, ys, zs, xi, yi, interp='nn')
     X, Y = np.meshgrid(xi, yi)
     return X, Y, Z
 

@@ -1,5 +1,5 @@
 import pandas as pd
-from pd_io import load, load_df, SESSIONS_INFILE_2, TRIALS_INFILE_2
+from pd_io import load, load_df, SESSIONS_INFILE_2, TRIALS_INFILE_2, resample_by_grp
 
 def main():
     def summary(df, key=['subj', 'dotmode', 'isLongDur']):
@@ -36,6 +36,9 @@ def main():
     keys = ["# sessions", "# trials", "# trials analyzed", "# trials/session", "# trials/session analyzed"]
     print dfA.set_index(key)[keys].to_csv()
     print dfA.groupby('isLongDur')[keys].sum()
+    print dfA.groupby('dotmode')[keys].sum()
+
+    print resample_by_grp(df3)
 
 if __name__ == '__main__':
     main()

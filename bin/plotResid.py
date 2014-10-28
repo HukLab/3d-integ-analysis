@@ -55,7 +55,7 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     plt.scatter(df['dur'], df['y2e'], sz, c=colorB, lw=lw1, label='bi-limb fit', zorder=5)
     plt.scatter(df['dur'], df['y1e'], sz, c=colorA, lw=lw1, label='tri-limb fit', zorder=5)
 
-    plt.plot([np.exp(ptA['x0']), np.exp(ptA['x0'])], [-30, 30], '--', lw=lw2, c=colorA, zorder=1)
+    plt.plot([np.exp(ptA['x0']), np.exp(ptA['x0'])], [-29.5, 8.5], '--', lw=lw2, c=colorA, zorder=1)
     plt.plot([0.01, df['dur'].max() + 50], [0, 0], '-', lw=lw2, c='k', zorder=1)
 
     # plt.plot(df['dur'], df['mean'])
@@ -70,7 +70,7 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     plt.ylabel('Motion sensitivity residual')
     leg = plt.legend(loc='upper left', prop={'size': 14})
     leg.get_frame().set_linewidth(1.5)
-    xtcks = np.array([50, 100, 500])
+    xtcks = np.array([33, 200, 1000])
     # xtcks = xtcks[xtcks >= df['dur'].min()]
     plt.xticks(xtcks, xtcks)
 
@@ -88,15 +88,15 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
 
 def main():
     yrng = (-17.0, 10.0)
-    xrng = (31.0, 1013.0)
+    xrng = (30.0, 1025.0)
     df0, df1, df2 = load()
-    plot(df0, df1, df2, '2d', colorA=[0.6, 0.6, 0.7], colorB=[0.2, 0.4, 1.0])
+    plot(df0, df1, df2, '2d', colorA=[0.65, 0.65, 0.9], colorB=[0.2, 0.4, 1.0])
     plt.xlim(xrng)
     plt.ylim(yrng)
     # plt.show()
     plt.savefig('../plots/elbowResiduals-ALL-2d.png')
     plt.clf()
-    plot(df0, df1, df2, '3d', colorA=[0.7, 0.6, 0.6], colorB=[0.9, 0.1, 0.1])
+    plot(df0, df1, df2, '3d', colorA=[0.9, 0.65, 0.65], colorB=[0.9, 0.1, 0.1])
     plt.xlim(xrng)
     plt.ylim(yrng)
     # plt.show()
