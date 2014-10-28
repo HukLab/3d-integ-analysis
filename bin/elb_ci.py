@@ -1,4 +1,5 @@
 import os.path
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -90,10 +91,20 @@ def hists(df, keys=['m1'], nbins=100):
         axs[0].spines[axis].set_linewidth(lw)
     for axis in ['top', 'right']:
         axs[0].spines[axis].set_linewidth(0)
-
     plt.show()
 
 if __name__ == '__main__':
-    # hists(load_elb(''))
-    # ci(load_elb(''))
-    ci(load_thresh('Dur'), ['dotmode', 'di'])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', "--ci", type=float, default=0.682, help="C.I. proportion, e.g., 0.682 = 68.2%%")
+    parser.add_argument('-e', "--elb", action='store_true', default=False, help="Print C.I.s of elbow params")
+    parser.add_argument('-t', "--thresh", action='store_true', default=False, help="Print C.I.s of threshold params")
+    parser.add_argument('-i', "--elb-hist", action='store_true', default=False, help="Show histograms of elbow params")
+    args = parser.parse_args()
+    if args.elb_hist:
+        hists(load_elb(''))
+    elif args.elb:
+        ci(load_elb(''), pct=args.ci)
+    elif args.thresh:
+        ci(load_thresh('Dur'), ['dotmode', 'di'], pct=args.ci)
+    else:
+        parser.print_help()
