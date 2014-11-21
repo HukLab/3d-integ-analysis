@@ -18,9 +18,10 @@
     plotResid.py - residuals of log-log plot using different numbers of elbows    
 
 ## Utils for data sanity-checking
-    corr.py - for assessing validity of threshold estimates
-    significance.py - comparing two data collection conditions
+    summaries.py - overview of # sessions and trials per subject and condition
     sequential_effects.py - comparing inter-trial dependencies
+    significance.py - comparing two data collection conditions
+    corr.py - for assessing validity of threshold estimates
 
 ## Utils for local plotting
     scatter.py - plotting individual subject fit params

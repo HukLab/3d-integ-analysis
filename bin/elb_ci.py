@@ -39,7 +39,7 @@ def ci(df, grpkeys=['dotmode'], pct=0.682):
                 continue
             xs = np.array([dg[k1][k2][0.5], dg[k1][k2][qs[0]], dg[k1][k2][qs[1]]])
             unt = ''
-            if k1[0] in ['b', 'x']:
+            if k1[0] in ['x']:
                 xs = np.exp(xs)
                 unt = ' msec'
             if k1 in ['thresh']:
@@ -98,6 +98,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', "--ci", type=float, default=0.682, help="C.I. proportion, e.g., 0.682 = 68.2%%")
     parser.add_argument('-e', "--elb", action='store_true', default=False, help="Print C.I.s of elbow params")
     parser.add_argument('-t', "--thresh", action='store_true', default=False, help="Print C.I.s of threshold params")
+    parser.add_argument('-k', "--threshkey", type=str, default='dur', choices=['dotmode', 'dur'], help="Print C.I.s of threshold params for ")
     parser.add_argument('-i', "--elb-hist", action='store_true', default=False, help="Show histograms of elbow params")
     args = parser.parse_args()
     if args.elb_hist:
@@ -105,6 +106,6 @@ if __name__ == '__main__':
     elif args.elb:
         ci(load_elb(''), pct=args.ci)
     elif args.thresh:
-        ci(load_thresh('Dur'), ['dotmode', 'di'], pct=args.ci)
+        ci(load_thresh(args.threshkey.capitalize()), ['dotmode', 'di'], pct=args.ci)
     else:
         parser.print_help()
