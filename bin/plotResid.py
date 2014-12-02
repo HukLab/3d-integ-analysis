@@ -9,7 +9,7 @@ basedir = '../fits'
 def load():
     f0 = 'pcorVsCohByDur_thresh-ALL-params.csv'
     f1 = 'pcorVsCohByDur_elbow-ALL-params.csv'
-    f2 = 'pcorVsCohByDur_1elbow-ALL-params.csv'
+    f2 = 'pcorVsCohByDur_0elbow-ALL-params.csv'
     df0 = pd.read_csv(os.path.join(basedir, f0))
     df1 = pd.read_csv(os.path.join(basedir, f1))
     df2 = pd.read_csv(os.path.join(basedir, f2))
@@ -34,7 +34,7 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
         df = df[df['dur'] > df['dur'].min()]
 
     ptA = df1[['x0','x1','b0','b1','m0','m1']].median()
-    df = df[df['dur'] <= np.exp(ptA['x1'])]
+    df = df[df['dur'] <= np.exp(ptA['x1'])] # ignore higher durs since line there is flat
     df['y1'] = df['dur']**ptA['m0']*np.exp(ptA['b0'])
     x1 = df['dur'] > np.exp(ptA['x0'])
     df['y1'][x1] = df['dur'][x1]**ptA['m1']*np.exp(ptA['b1'])
@@ -45,13 +45,12 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     sz = 80
     lw1 = 1
     lw2 = 2
-    # colorB = [0.0, 0.7, 0.0]
     df['y1e'] = -(df['y1'] - df['mean'])/df['std']
     df['y2e'] = -(df['y2'] - df['mean'])/df['std']
     # plt.plot(df['dur'], df['y2e'], lw=lw1, c='k', zorder=4)
     # plt.plot(df['dur'], df['y1e'], lw=lw1, c='k', zorder=4)
-    plt.gca().fill_between(df['dur'], 0.0, df['y2e'], lw=0, facecolor=colorB, alpha=1.0, zorder=3)
-    plt.gca().fill_between(df['dur'], 0.0, df['y1e'], lw=0, facecolor=colorA, alpha=0.6, zorder=3)
+    plt.gca().fill_between(df['dur'], 0.0, df['y2e'], lw=0, color=colorB, facecolor=colorB, alpha=1.0, zorder=3)
+    plt.gca().fill_between(df['dur'], 0.0, df['y1e'], lw=0, color=colorA, facecolor=colorA, alpha=0.6, zorder=3)
     plt.scatter(df['dur'], df['y2e'], sz, c=colorB, lw=lw1, label='bi-limb fit', zorder=5)
     plt.scatter(df['dur'], df['y1e'], sz, c=colorA, lw=lw1, label='tri-limb fit', zorder=5)
 
@@ -94,13 +93,13 @@ def main():
     plt.xlim(xrng)
     plt.ylim(yrng)
     # plt.show()
-    plt.savefig('../plots/elbowResiduals-ALL-2d.png')
+    plt.savefig('../plots/elbowResiduals-ALL-2d.pdf')
     plt.clf()
     plot(df0, df1, df2, '3d', colorA=[0.9, 0.65, 0.65], colorB=[0.9, 0.1, 0.1])
     plt.xlim(xrng)
     plt.ylim(yrng)
     # plt.show()
-    plt.savefig('../plots/elbowResiduals-ALL-3d.png')
+    plt.savefig('../plots/elbowResiduals-ALL-3d.pdf')
 
 if __name__ == '__main__':
     main()

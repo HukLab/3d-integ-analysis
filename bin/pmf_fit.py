@@ -83,8 +83,8 @@ def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
         of3 = ofcn0('elbow', 'params')
         df_elbs.to_csv(of3)
 
-def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope, resample=None):
-    secondElbow = (983.0, 1894.0)
+def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope, resample=None, ignoreLastElb=False):
+    secondElbow = (983.0, 1894.0) if ignoreLastElb else False # ignores data past these times in (2d, 3d)
     df = load(ps, None, 'both' if isLongDur else False, nbins, secondElbow)
     if resample:
         df = resample_by_grp(df, resample)
@@ -138,6 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('--min-di', type=int, default=0)
     parser.add_argument('--enforce-zero', action='store_true', default=True)
+    parser.add_argument('--ignore-last-elb', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind, 'session_index': args.sessind}
-    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero, args.resample)
+    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero, args.resample, args.ignore_last_elb)
