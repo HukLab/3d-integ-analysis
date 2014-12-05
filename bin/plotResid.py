@@ -45,17 +45,17 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     sz = 80
     lw1 = 1
     lw2 = 2
-    df['y1e'] = -(df['y1'] - df['mean'])/df['std']
-    df['y2e'] = -(df['y2'] - df['mean'])/df['std']
+    df['y1e'] = (df['mean'] - df['y1'])/df['std']
+    df['y2e'] = (df['mean'] - df['y2'])/df['std']
     # plt.plot(df['dur'], df['y2e'], lw=lw1, c='k', zorder=4)
     # plt.plot(df['dur'], df['y1e'], lw=lw1, c='k', zorder=4)
     plt.gca().fill_between(df['dur'], 0.0, df['y2e'], lw=0, color=colorB, facecolor=colorB, alpha=1.0, zorder=3)
     plt.gca().fill_between(df['dur'], 0.0, df['y1e'], lw=0, color=colorA, facecolor=colorA, alpha=0.6, zorder=3)
-    plt.scatter(df['dur'], df['y2e'], sz, c=colorB, lw=lw1, label='bi-limb fit', zorder=5)
-    plt.scatter(df['dur'], df['y1e'], sz, c=colorA, lw=lw1, label='tri-limb fit', zorder=5)
+    plt.scatter(df['dur'], df['y2e'], sz, c=colorB, lw=1.5, label='bi-limb fit', zorder=5)
+    plt.scatter(df['dur'], df['y1e'], sz, c=colorA, lw=1.5, label='tri-limb fit', zorder=5)
 
     plt.plot([np.exp(ptA['x0']), np.exp(ptA['x0'])], [-29.5, 8.5], '--', lw=lw2, c=colorA, zorder=1)
-    plt.plot([0.01, df['dur'].max() + 50], [0, 0], '-', lw=lw2, c='k', zorder=1)
+    # plt.plot([0.01, df['dur'].max() + 50], [0, 0], '-', lw=lw2, c='k', zorder=1)
 
     # plt.plot(df['dur'], df['mean'])
     # plt.scatter(df['dur'], df['y1'], c='g')
@@ -89,6 +89,7 @@ def main():
     yrng = (-17.0, 10.0)
     xrng = (30.0, 1025.0)
     df0, df1, df2 = load()
+    plt.figure(figsize=(8, 7))
     plot(df0, df1, df2, '2d', colorA=[0.65, 0.65, 0.9], colorB=[0.2, 0.4, 1.0])
     plt.xlim(xrng)
     plt.ylim(yrng)
