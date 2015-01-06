@@ -1,7 +1,9 @@
 ## Folder structure
 
 __bin/ (.py)__ - data analysis scripts
+
 __data/ (.csv)__ - original data collected from two different experiments
+
 __notes/ (.md, .txt)__ - miscellaneous scratch notes
 
 ## Data analysis scripts (in bin/)
