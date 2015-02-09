@@ -101,9 +101,8 @@ def remove_dis(df, bad_dis, dotmode):
     print 'WARNING: Ignoring all thresholds for {1} durations={0}'.format(df[df['di'].isin(bad_dis)]['dur'].unique(), dotmode)
     return df[~df['di'].isin(bad_dis)]
     
-def find_elbows_per_boots(dfr, nElbows, min_di=0, enforceZeroSlope=False):
+def find_elbows_per_boots(dfr, nElbows, enforceZeroSlope=False):
     """
-    min_di ignores all durations where duration_index < min_di
     enforceZeroSlope ensures that the last slope of all elbow fits is always 0
     """
     rows = []

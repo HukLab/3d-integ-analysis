@@ -19,9 +19,10 @@ from matplotlib import rcParams
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Helvetica Neue']
 # rcParams['font.weight'] = 'bold'
-rcParams['font.size'] = 14
+rcParams['font.size'] = 28
 rcParams['axes.unicode_minus'] = False
 matplotlib.rc('lines', linewidth=2)
+LegendFontSize = 20
 
 def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     df0 = df0a[df0a['dotmode'] == dotmode]
@@ -49,8 +50,8 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     df['y2e'] = (df['mean'] - df['y2'])/df['std']
     # plt.plot(df['dur'], df['y2e'], lw=lw1, c='k', zorder=4)
     # plt.plot(df['dur'], df['y1e'], lw=lw1, c='k', zorder=4)
-    plt.gca().fill_between(df['dur'], 0.0, df['y2e'], lw=0, color=colorB, facecolor=colorB, alpha=1.0, zorder=3)
-    plt.gca().fill_between(df['dur'], 0.0, df['y1e'], lw=0, color=colorA, facecolor=colorA, alpha=0.6, zorder=3)
+    plt.gca().fill_between(df['dur'], 0.0, df['y2e'], lw=0, color=colorB, facecolor=colorB, alpha=0.6, zorder=3)
+    plt.gca().fill_between(df['dur'], 0.0, df['y1e'], lw=0, color=colorA, facecolor=colorA, alpha=1.0, zorder=3)
     plt.scatter(df['dur'], df['y2e'], sz, c=colorB, lw=1.5, label='bi-limb fit', zorder=5)
     plt.scatter(df['dur'], df['y1e'], sz, c=colorA, lw=1.5, label='tri-limb fit', zorder=5)
 
@@ -67,7 +68,7 @@ def plot(df0a, df1a, df2a, dotmode, colorA, colorB):
     # plt.ylim(ys.min()-1, ys.max()+1)
     plt.xlabel('Duration (msec)')
     plt.ylabel('Motion sensitivity residual')
-    leg = plt.legend(loc='upper left', prop={'size': 14})
+    leg = plt.legend(loc='upper left', prop={'size': LegendFontSize})
     leg.get_frame().set_linewidth(1.5)
     xtcks = np.array([33, 200, 1000])
     # xtcks = xtcks[xtcks >= df['dur'].min()]
@@ -90,13 +91,13 @@ def main():
     xrng = (30.0, 1025.0)
     df0, df1, df2 = load()
     plt.figure(figsize=(8, 7))
-    plot(df0, df1, df2, '2d', colorA=[0.65, 0.65, 0.9], colorB=[0.2, 0.4, 1.0])
+    plot(df0, df1, df2, '2d', colorB=[0.65, 0.65, 0.9], colorA=[0.2, 0.4, 1.0])
     plt.xlim(xrng)
     plt.ylim(yrng)
     # plt.show()
     plt.savefig('../plots/elbowResiduals-ALL-2d.pdf')
     plt.clf()
-    plot(df0, df1, df2, '3d', colorA=[0.9, 0.65, 0.65], colorB=[0.9, 0.1, 0.1])
+    plot(df0, df1, df2, '3d', colorB=[0.9, 0.65, 0.65], colorA=[0.9, 0.1, 0.1])
     plt.xlim(xrng)
     plt.ylim(yrng)
     # plt.show()

@@ -109,7 +109,20 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def load(ps=None, filters=None, extraDataset=None, nbins=None, ignorePastSecondElbow=False):
+def filterElbows(def, firstElbow, secondElbow):
+    if firstElbow and len(firstElbow) == 2:
+        t2d, t3d = firstElbow
+        d2d = (df['dotmode'] == '2d') & (df['real_duration'] >= t2d)
+        d3d = (df['dotmode'] == '3d') & (df['real_duration'] >= t3d)
+        df = df[d2d | d3d]
+    if secondElbow and len(secondElbow) == 2:
+        t2d, t3d = secondElbow
+        d2d = (df['dotmode'] == '2d') & (df['real_duration'] <= t2d)
+        d3d = (df['dotmode'] == '3d') & (df['real_duration'] <= t3d)
+        df = df[d2d | d3d]
+    return df
+
+def load(ps=None, filters=None, extraDataset=None, nbins=None, ignorePastSecondElbow=False, ignoreBeforeFirstElbow=False):
     if extraDataset == 'longDur':
         df = load_df(SESSIONS_INFILE_2, TRIALS_INFILE_2)
         df = rebin(df, extraDataset, NBINS_longDur if nbins is None else nbins)
@@ -125,13 +138,7 @@ def load(ps=None, filters=None, extraDataset=None, nbins=None, ignorePastSecondE
         df = rebin(df, extraDataset, NBINS if nbins is None else nbins)
     fltrs = filters if filters is not None else []
     df = filter_df(df, fltrs + interpret_filters(ps))
-
-    if ignorePastSecondElbow and len(ignorePastSecondElbow) == 2:
-        t2d, t3d = ignorePastSecondElbow
-        d2d = (df['dotmode'] == '2d') & (df['real_duration'] <= t2d)
-        d3d = (df['dotmode'] == '3d') & (df['real_duration'] <= t3d)
-        df = df[d2d | d3d]
-
+    df = filterElbows(df, ignoreBeforeFirstElbow, ignorePastSecondElbow)
     return default_filter_df(df)
 
 def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None):

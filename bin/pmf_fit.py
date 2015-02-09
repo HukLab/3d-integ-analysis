@@ -83,9 +83,10 @@ def to_csv(nbins, nboots, subj, df_pts, df_fts, df_elbs, outdir, ignore_dur):
         of3 = ofcn0('elbow', 'params')
         df_elbs.to_csv(of3)
 
-def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, min_di, enforceZeroSlope, resample=None, ignoreLastElb=False):
-    secondElbow = (983.0, 1894.0) if ignoreLastElb else False # ignores data past these times in (2d, 3d)
-    df = load(ps, None, 'both' if isLongDur else False, nbins, secondElbow)
+def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur, nElbows, enforceZeroSlope, resample=None, ignoreElbs=False):
+    firstElbow = (136.0, 171.0) if ignoreElbs else False
+    secondElbow = (983.0, 1267.0) if ignoreElbs else False # ignores data past these times in (2d, 3d)
+    df = load(ps, None, 'both' if isLongDur else False, nbins, secondElbow, firstElbow)
     if resample:
         df = resample_by_grp(df, resample)
     durmap = make_durmap(df)
@@ -107,7 +108,7 @@ def main(ps, nbins, nboots, ignore_dur, doPlotPmf, doPlotElb, outdir, isLongDur,
     df_fts['sens'] = 1/df_fts['thresh']
 
     if not ignore_dur and nElbows >= 0:
-        df_elbs = find_elbows_per_boots(df_fts, nElbows, min_di, enforceZeroSlope)
+        df_elbs = find_elbows_per_boots(df_fts, nElbows, enforceZeroSlope)
     else:
         df_elbs = pd.DataFrame()
     if doPlotPmf:
@@ -138,7 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('--min-di', type=int, default=0)
     parser.add_argument('--enforce-zero', action='store_true', default=True)
-    parser.add_argument('--ignore-last-elb', action='store_true', default=False)
+    parser.add_argument('--ignore-elbs', action='store_true', default=False)
     args = parser.parse_args()
     ps = {'subj': args.subj, 'dotmode': args.dotmode, 'duration_index': args.durind, 'session_index': args.sessind}
-    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.min_di, args.enforce_zero, args.resample, args.ignore_last_elb)
+    main(ps, args.nbins, args.nboots, args.ignore_dur, args.plot_pmf, args.plot_elb, args.outdir, args.is_long_dur, args.n_elbows, args.enforce_zero, args.resample, args.ignore_elbs)
