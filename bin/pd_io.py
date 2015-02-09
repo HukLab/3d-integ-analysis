@@ -109,7 +109,7 @@ def default_filter_df(df):
         df = df[reduce(or_, ffs)]
     return df
 
-def filterElbows(def, firstElbow, secondElbow):
+def filterElbows(df, firstElbow, secondElbow):
     if firstElbow and len(firstElbow) == 2:
         t2d, t3d = firstElbow
         d2d = (df['dotmode'] == '2d') & (df['real_duration'] >= t2d)
