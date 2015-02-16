@@ -13,7 +13,22 @@ GUESSES = {'A': A_GUESSES, 'B': B_GUESSES, 'T': T_GUESSES}
 BOUNDS = {'A': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'B': (0.0+APPROX_ZERO, 1.0-APPROX_ZERO), 'T': (0.0+APPROX_ZERO, None)}
 CONSTRAINTS = [] # [{'type': 'ineq', 'fun': lambda theta: theta[0] - theta[1]}] # A > B
 
-DEFAULT_DELAY = 0.03 # 0.03
+DEFAULT_DELAY = 0.1/3 # 0.03
+
+def double_saturating_exp(x, A, B, T1, T2, p, x0=DEFAULT_DELAY):
+    """
+    A is the end asymptote value
+    B is the start asymptote value
+    T1 is the 1st time constant, s.t. value is p*63.2%  of (A-B)
+    T2 is the 2nd time constant, s.t. value is (1-p)*63.2%  of (A-B)
+    p is the proportion of range (A-B) contributed to by T1, as opposed to T2
+    """
+    # print A,B,T1,T2,p,x0
+    if not (0 <= p <= 1):
+        return np.inf
+    if T1*T2 == 0:
+        return np.ones(len(x))*A if isinstance(x, Iterable) else A
+    return A - p*(A-B)*np.exp(-(x-x0)*1000./T1) - (1-p)*(A-B)*np.exp(-(x-x0)*1000./T2)
 
 def saturating_exp(x, A, B, T, x0=DEFAULT_DELAY):
     """

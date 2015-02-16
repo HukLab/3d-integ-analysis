@@ -1,6 +1,7 @@
 import os.path
 import numpy as np
 import pandas as pd
+from scipy import stats
 from itertools import product
 import matplotlib.pyplot as plt
 
@@ -76,7 +77,9 @@ def show(outfile, i):
         plt.show()
     return i+1
 
-def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=True):
+def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=False):
+    firstElbow = (136.0, 171.0)
+    secondElbow = (983.0, 1267.0)
     I = 0
     df = pd.read_csv(f1)
     dff = pd.read_csv(f2)
@@ -89,12 +92,20 @@ def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=True):
 
     if plot_fits:
         plt.figure()
-        df = df[df[KEY] > 0]
+        # df = df[df[KEY] > 0]
         df1 = df.groupby(['dotmode', 'dur'], as_index=False).mean()
-        df1.groupby('dotmode').plot('dur', KEY, ax=plt.gca(), loglog=True, kind='scatter')
-        dfmed.groupby('dotmode').plot('dur', KEY, ax=plt.gca(), loglog=True)
+        df1[df1['dotmode']=='2d'].plot('dur', KEY, ax=plt.gca(), loglog=True, color='b', kind='scatter')
+        df1[df1['dotmode']=='3d'].plot('dur', KEY, ax=plt.gca(), loglog=True, color='r', kind='scatter')
+        df1.groupby('dotmode').plot('dur', KEY, ax=plt.gca(), loglog=True, color='black', linestyle='--')
+        dfmed[dfmed['dotmode']=='2d'].plot('dur', KEY, ax=plt.gca(), loglog=True, color='b')
+        dfmed[dfmed['dotmode']=='3d'].plot('dur', KEY, ax=plt.gca(), loglog=True, color='r')
         # dfmean.groupby('dotmode').plot('dur', KEY, ax=plt.gca(), loglog=True)
         # dfall.groupby('dotmode').plot('dur', KEY, ax=plt.gca(), loglog=True)
+
+        plt.plot([firstElbow[0], firstElbow[0]], [0.1, 1000.0], color='b')
+        plt.plot([secondElbow[0], secondElbow[0]], [0.1, 1000.0], color='b')
+        plt.plot([firstElbow[1], firstElbow[1]], [0.1, 1000.0], color='r')
+        plt.plot([secondElbow[1], secondElbow[1]], [0.1, 1000.0], color='r')
         plt.title('median fit')
         I = show(outfile, I)
 
@@ -147,16 +158,22 @@ if __name__ == '__main__':
     # indir = '../plots/tri-limb-free'
     keys = ['one-limb']
     # keys = ['tri-limb-free', 'twin-limb-free', 'tri-limb-zero', 'twin-limb-zero', 'twin-limb-zero-drop_two', 'twin-limb-drop_two']
-    for key in keys:
-        indir = '../plots/' + key
-        outdir = '../plots/figs/'
+    subjs = ['ALL', 'KRM', 'KLB', 'HUK', 'LKC', 'LNK']
+    dirname = 'fits0'
+    indir = '/Users/mobeets/Desktop/' + dirname
+    outdir = indir + '/figs'
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+
+    for subj in subjs:
         # indir = '../plots/tmp4'
         # indir = '../plots/twin-limb-zero-drop2'
         # indir = '../plots/twin-limb-zero'
-        fn1 = 'pcorVsCohByDur_thresh-ALL-params.csv'
-        fn2 = 'pcorVsCohByDur_elbow-ALL-params.csv'
-        gn1 = key + '.png'
+        fn1 = 'pcorVsCohByDur_thresh-{0}-params.csv'.format(subj)
+        fn2 = 'pcorVsCohByDur_elbow-{0}-params.csv'.format(subj)
+        gn1 = subj + '.png'
         f1 = os.path.join(indir, fn1)
         f2 = os.path.join(indir, fn2)
         g1 = os.path.abspath(os.path.join(outdir, gn1))
         main(f1, f2, g1)
+        # main(f1, f2, g1)

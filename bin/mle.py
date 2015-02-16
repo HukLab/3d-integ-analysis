@@ -95,7 +95,7 @@ def keep_solution(theta, bnds, ymin):
     at_bounds = lambda x, (lb, rb): at_left_bound(x, lb) or at_right_bound(x, rb)
     return not any([at_bounds(th, bnd) for th, bnd in zip(theta['x'], bnds)])
 
-def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=False, method='TNC'):
+def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=False, method='TNC', opts=None):
     """
     data is list [(dur, resp)]
         dur is float
@@ -113,26 +113,31 @@ def mle(data, log_likelihood_fcn, guesses, bounds=None, constraints=None, quick=
         bounds = []
     if constraints is None:
         constraints = []
+    if opts is None:
+        opts = {}
 
     thetas = []
     poor_thetas = []
     ymin = float('inf')
     ymin_poor = float('inf')
     for guess in guesses:
-        theta = minimize(log_likelihood_fcn, guess, method=method, bounds=bounds, constraints=constraints)
+        theta = minimize(log_likelihood_fcn, guess, method=method, bounds=bounds, constraints=constraints, options=opts)
         if keep_solution(theta, bounds, ymin):
             ymin = theta['fun']
             thetas.append(theta)
             if quick:
-                logging.info(theta)
+                # logging.info(theta)
                 return thetas
             msg = '{0}, {1}'.format(theta['x'], theta['fun'])
-            logging.info(msg)
+            # logging.info(msg)
         elif theta['success'] and theta['fun'] < ymin_poor:
             ymin_poor = theta['fun']
             poor_thetas.append(theta)
+        elif not theta['success']:
+            pass
+            # logging.warning('Not successful: ' + str(theta))
     if len(thetas) == 0:
-        logging.warning('Using theta against bounds.')
+        # logging.warning('Using theta against bounds.')
         return poor_thetas
     return thetas
 
