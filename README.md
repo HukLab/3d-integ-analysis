@@ -22,6 +22,7 @@
     pmf_fit.py - psychometric functions fitting
     pmf_elbows.py - used by pmf_fit.py
     pcorVsDurByCoh.py - sat-exp fitting
+    pmf_fit_subjs.py - alternative fits to sensitivity vs duration
 
 ### Plotting
     elb_ci.py - confidence intervals and histograms of elbow fit params

@@ -1,0 +1,4 @@
+scipy==0.14.0
+numpy==1.8.1
+pandas==0.14.0
+pypsignifit==3.0beta
