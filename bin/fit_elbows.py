@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import linregress
-from pmf_plot import make_durmap
+from plot_pmf import make_durmap
 
 is_nan_or_inf = lambda items: np.isnan(items) | np.isinf(items)
 

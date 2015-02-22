@@ -12,19 +12,19 @@ mkdir -p $OUTDIR
 
 echo "Psychometric function for ALL (2D, 3D)..."
 
-python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR
+python fit_pmf.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR
 
 MODEL_SUBJ="krm"
-python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
+python fit_pmf.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
 
 MODEL_SUBJ="klb"
-python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
+python fit_pmf.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
 
 MODEL_SUBJ="huk"
-python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
+python fit_pmf.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
 
 MODEL_SUBJ="lkc"
-python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
+python fit_pmf.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
 
 MODEL_SUBJ="lnk"
-python pmf_fit.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ
+python fit_pmf.py -l -e $NELBOWS --nbins $NBINS_THRESH --nboots $NBOOTS_THRESH -r $RESAMPLE --outdir $OUTDIR --subj $MODEL_SUBJ

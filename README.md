@@ -19,16 +19,14 @@
     sample.py - bootstrapping
     mle.py - generic fitting helpers
     saturating_exponential.py - sat-exp function
-    pmf_fit.py - psychometric functions fitting
-    pmf_elbows.py - used by pmf_fit.py
-    pcorVsDurByCoh.py - sat-exp fitting
-    pmf_fit_subjs.py - alternative fits to sensitivity vs duration
+    fit_pmf.py - psychometric functions fitting
+    fit_elbows.py - used by fit_pmf.py
+    fit_pcor_vs_dur.py - sat-exp fitting
+    fit_elbows_alts.py - alternative fits to sensitivity vs duration
 
-### Plotting
+### Calculating statistics
     elb_ci.py - confidence intervals and histograms of elbow fit params
-    plotResid.py - residuals of log-log plot using different numbers of elbows    
-
-### Utils for data sanity-checking
+    elb_bic.py - calculate BIC for elbow fits of sensitivity vs duration
     summaries.py - overview of # sessions and trials per subject and condition
     sequential_effects.py - comparing inter-trial dependencies
     significance.py - comparing two data collection conditions
@@ -36,6 +34,7 @@
 
 ### Utils for local plotting
     scatter.py - plotting individual subject fit params
-    pmf_plot.py - plotting pmfs
-    pmf_plot_bs.py - plotting bootstrapped pmfs
+    plot_pmf.py - plotting pmfs
+    plot_elbs.py - plotting bootstrapped fits to sensitivity vs duration
+    plot_resid.py - residuals of log-log plot using different numbers of elbows    
     pcor_mesh_plot.py - plotting accuracy vs. both coh and dur

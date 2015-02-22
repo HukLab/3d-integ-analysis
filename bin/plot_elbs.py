@@ -66,6 +66,52 @@ def residuals(df, dff):
     df2['resid'] = df2[KEY + '_x'] - df2[KEY + '_y']
     return df2
 
+def load_pts(infile):
+    df = pd.read_csv(infile)
+    df = df[(df['sens'] >= 0.0)]# & (df['sens'] < 150.0)]
+    # remove first two duration bins for 3d
+    inds = (df['dotmode']=='3d') & (df['di'] < 3)
+    df = df[~inds]
+    return df
+
+def load_fits(infile, df_pts):
+    dff = pd.read_csv(infile)
+    df1 = limb(df_pts, dff)
+    return df1
+
+def plot_hists(d1, d2, nbins=100, clr1='k', clr2='g'):
+    d1 = pd.Series(d1)
+    d2 = pd.Series(d2)
+    bins = np.linspace(min(d1.min(), d2.min()), max(d1.max(), d2.max()), nbins)
+    d1.hist(bins=bins, alpha=0.3, color=clr1)
+    d2.hist(bins=bins, alpha=0.3, color=clr2)
+    plt.show()
+
+# rss = lambda y, yh: ((y - yh)**2).sum()
+# bic_gaussian = lambda y, yh, k: len(y)*np.log(rss(y, yh)) - (len(y)-k)*np.log(n)
+bic_gaussian = lambda rss, ny, k: ny*np.log(rss) - (ny-k)*np.log(ny)
+
+def compare_bic(f_pts, f1, f2, k_f1, k_f2):
+    df_pts = load_pts(f_pts)
+    df_pts = df_pts[df_pts['bi']==0]
+    dff1 = load_fits(f1, df_pts)
+    dff2 = load_fits(f2, df_pts)
+    df1r = residuals(df_pts, dff1)
+    df2r = residuals(df_pts, dff2)
+
+    df1r['se'] = df1r['resid']**2
+    df2r['se'] = df2r['resid']**2
+
+    sse1 = df1r.groupby('bi_y').sum()['se']#.hist(bins=bins, alpha=0.3)
+    sse2 = df2r.groupby('bi_y').sum()['se']#.hist(bins=bins, alpha=0.3)
+    # plt.show()
+    ny = len(sse1)
+    assert len(sse2) == ny
+    bic1 = [bic_gaussian(sse, ny, k_f1) for sse in sse1.values]
+    bic2 = [bic_gaussian(sse, ny, k_f2) for sse in sse2.values]
+    plot_hists(bic1, bic2)
+    1/0
+
 def outfilei(outfile, i):
     return outfile.replace('.', '-{0}.'.format(i))
 
@@ -76,7 +122,7 @@ def show(outfile, i):
     else:
         plt.show()
     return i+1
-
+    
 def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=False):
     firstElbow = (136.0, 171.0)
     secondElbow = (983.0, 1267.0)
@@ -156,11 +202,10 @@ def main(f1, f2, outfile=None, plot_fits=True, plot_hists=True, plot_res=False):
 
 if __name__ == '__main__':
     # indir = '../plots/tri-limb-free'
-    keys = ['one-limb']
-    # keys = ['tri-limb-free', 'twin-limb-free', 'tri-limb-zero', 'twin-limb-zero', 'twin-limb-zero-drop_two', 'twin-limb-drop_two']
-    subjs = ['ALL', 'KRM', 'KLB', 'HUK', 'LKC', 'LNK']
+    subjs = ['ALL']#, 'KRM', 'KLB', 'HUK', 'LKC', 'LNK']
     dirname = 'fits0'
     indir = '/Users/mobeets/Desktop/' + dirname
+    indir = '../fits'
     outdir = indir + '/figs'
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -171,9 +216,11 @@ if __name__ == '__main__':
         # indir = '../plots/twin-limb-zero'
         fn1 = 'pcorVsCohByDur_thresh-{0}-params.csv'.format(subj)
         fn2 = 'pcorVsCohByDur_elbow-{0}-params.csv'.format(subj)
+        fn3 = 'pcorVsCohByDur_1elbow-{0}-params.csv'.format(subj)
         gn1 = subj + '.png'
         f1 = os.path.join(indir, fn1)
         f2 = os.path.join(indir, fn2)
+        f3 = os.path.join(indir, fn3)
         g1 = os.path.abspath(os.path.join(outdir, gn1))
-        main(f1, f2, g1)
+        compare_bic(f1, f2, f3, 5, 3) # 5,3 are number of free parameters
         # main(f1, f2, g1)

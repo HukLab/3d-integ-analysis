@@ -5,8 +5,8 @@ import pandas as pd
 import pypsignifit as psi
 
 from pd_io import load, resample_by_grp
-from pmf_elbows import find_elbows_per_boots
-from pmf_plot import plot_logistics, plot_threshes, make_durmap, label_fcn, Finv
+from fit_elbows import find_elbows_per_boots
+from plot_pmf import plot_logistics, plot_threshes, make_durmap, label_fcn, Finv
 
 THRESH_VAL = 0.75
 
