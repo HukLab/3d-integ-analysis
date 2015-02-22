@@ -80,16 +80,20 @@ def load_fits(infile, df_pts):
     return df1
 
 def plot_hists(d1, d2, nbins=100, clr1='k', clr2='g'):
-    d1 = pd.Series(d1)
-    d2 = pd.Series(d2)
     bins = np.linspace(min(d1.min(), d2.min()), max(d1.max(), d2.max()), nbins)
     d1.hist(bins=bins, alpha=0.3, color=clr1)
     d2.hist(bins=bins, alpha=0.3, color=clr2)
     plt.show()
 
 bic_gaussian = lambda rss, ny, k: ny*np.log(rss) - (ny-k)*np.log(ny)
+lbf = lambda pct: (1.0-pct)/2.0
 
-def compare_bic(f_pts, f1, f2, k_f1, k_f2):
+def ci(df, pct=0.682): #0.955
+    qs = [lbf(pct), 1-lbf(pct)]
+    dff = df.quantile(qs + [0.5])
+    return dff.values
+
+def compare_bic(f_pts, (f1, k_f1, lbl_f1), (f2, k_f2, lbl_f2)):
     df_pts = load_pts(f_pts)
     df_pts = df_pts[df_pts['bi']==0]
     dff1 = load_fits(f1, df_pts)
@@ -105,8 +109,12 @@ def compare_bic(f_pts, f1, f2, k_f1, k_f2):
 
     ny = len(sse1)
     assert len(sse2) == ny
-    bic1 = [bic_gaussian(sse, ny, k_f1) for sse in sse1.values]
-    bic2 = [bic_gaussian(sse, ny, k_f2) for sse in sse2.values]
+    bic1 = pd.Series([bic_gaussian(sse, ny, k_f1) for sse in sse1.values])
+    bic2 = pd.Series([bic_gaussian(sse, ny, k_f2) for sse in sse2.values])
+    lb, ub, med = ci(bic1)
+    print '{0}: {1}    C.I.=({2}, {3})'.format(lbl_f1, med, lb, ub)
+    lb, ub, med = ci(bic2)
+    print '{0}: {1}    C.I.=({2}, {3})'.format(lbl_f2, med, lb, ub)
     plot_hists(bic1, bic2)
 
 if __name__ == '__main__':
@@ -118,4 +126,4 @@ if __name__ == '__main__':
     f1 = os.path.join(indir, fn1)
     f2 = os.path.join(indir, fn2)
     f3 = os.path.join(indir, fn3)
-    compare_bic(f1, f2, f3, 5, 3)
+    compare_bic(f1, (f2, 5, 'tri-limb'), (f3, 3, 'bi-limb'))
