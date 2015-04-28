@@ -60,9 +60,10 @@ def limb(df1, df2):
         return one_limb(df1, df2)
 
 def residuals(df, dff):
-    inds = ['dotmode', 'dur']
-    df1 = df.groupby(inds, as_index=False).mean()
-    df2 = df1.merge(dff, on=inds)
+    inds = ['dotmode', 'di', 'bi']
+    # df1 = df.groupby(inds, as_index=False).mean()
+    # df2 = df1.merge(dff, on=inds)
+    df2 = df.merge(dff, on=inds)
     df2['resid'] = df2[KEY + '_x'] - df2[KEY + '_y']
     return df2
 
@@ -76,6 +77,7 @@ def load_pts(infile):
 
 def load_fits(infile, df_pts):
     dff = pd.read_csv(infile)
+    dff = dff.groupby('dotmode', as_index=False).median()
     df1 = limb(df_pts, dff)
     return df1
 
@@ -85,37 +87,50 @@ def plot_hists(d1, d2, nbins=100, clr1='k', clr2='g'):
     d2.hist(bins=bins, alpha=0.3, color=clr2)
     plt.show()
 
-bic_gaussian = lambda rss, ny, k: ny*np.log(rss) - (ny-k)*np.log(ny)
 lbf = lambda pct: (1.0-pct)/2.0
+rss_gaussian = lambda rss, ny, k: ny*np.log(rss/ny)
+aic_gaussian = lambda rss, ny, k: ny*np.log(rss/ny) + 2*k
+bic_gaussian = lambda rss, ny, k: ny*np.log(rss/ny) + k*np.log(ny)
 
 def ci(df, pct=0.682): #0.955
     qs = [lbf(pct), 1-lbf(pct)]
     dff = df.quantile(qs + [0.5])
     return dff.values
 
-def compare_bic(f_pts, (f1, k_f1, lbl_f1), (f2, k_f2, lbl_f2)):
+def compare_bic(f_pts, (f1, k_f1, lbl_f1), (f2, k_f2, lbl_f2), score_fcn=rss_gaussian):
     df_pts = load_pts(f_pts)
-    df_pts = df_pts[df_pts['bi']==0]
     dff1 = load_fits(f1, df_pts)
     dff2 = load_fits(f2, df_pts)
     df1r = residuals(df_pts, dff1)
     df2r = residuals(df_pts, dff2)
-
     df1r['se'] = df1r['resid']**2
     df2r['se'] = df2r['resid']**2
 
-    sse1 = df1r.groupby('bi_y').sum()['se']
-    sse2 = df2r.groupby('bi_y').sum()['se']
+    for dotmode in ['2d', '3d']:
+        print dotmode
+        df1rc = df1r[df1r['dotmode'] == dotmode]
+        df2rc = df2r[df2r['dotmode'] == dotmode]
+        # df1rc = df1rc[df1rc['bi']==0]
+        # df2rc = df2rc[df2rc['bi']==0]
 
-    ny = len(sse1)
-    assert len(sse2) == ny
-    bic1 = pd.Series([bic_gaussian(sse, ny, k_f1) for sse in sse1.values])
-    bic2 = pd.Series([bic_gaussian(sse, ny, k_f2) for sse in sse2.values])
-    lb, ub, med = ci(bic1)
-    print '{0}: {1}    C.I.=({2}, {3})'.format(lbl_f1, med, lb, ub)
-    lb, ub, med = ci(bic2)
-    print '{0}: {1}    C.I.=({2}, {3})'.format(lbl_f2, med, lb, ub)
-    plot_hists(bic1, bic2)
+        sse1 = df1rc.groupby('bi').sum()['se']
+        sse2 = df2rc.groupby('bi').sum()['se']
+
+        ny = len(df1rc['di'].unique())
+        bic1 = pd.Series([score_fcn(sse, ny, k_f1) for sse in sse1.values])
+        bic2 = pd.Series([score_fcn(sse, ny, k_f2) for sse in sse2.values])
+
+        bic = bic2 - bic1
+        lb, ub, med = ci(bic)
+        print '{0}: {1}    C.I.=({2}, {3})'.format('delta_BIC', med, lb, ub)
+        # plt.hist(bic2-bic1, bins=100)
+        # plt.show()
+
+        lb, ub, med = ci(bic1)
+        print '{0}: {1}    C.I.=({2}, {3})'.format(lbl_f1, med, lb, ub)
+        lb, ub, med = ci(bic2)
+        print '{0}: {1}    C.I.=({2}, {3})'.format(lbl_f2, med, lb, ub)
+        # plot_hists(bic1, bic2)
 
 if __name__ == '__main__':
     subj = 'ALL'

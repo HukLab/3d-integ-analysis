@@ -141,8 +141,12 @@ def load(ps=None, filters=None, extraDataset=None, nbins=None, ignorePastSecondE
     df = filterElbows(df, ignoreBeforeFirstElbow, ignorePastSecondElbow)
     return default_filter_df(df)
 
-def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None):
+def main(ps, isLongDur=False, nbins=None, doPlot=False, outdir=None, outdir_trials=None):
     df = load(ps, None, 'both' if isLongDur else False, nbins)
+    if outdir_trials:
+        subjs = df['subj'].unique()
+        subj = subjs[0] if len(subjs) == 1 else 'ALL'
+        df.to_csv(os.path.join(outdir_trials, 'pcor-{0}-trials.csv').format(subj))
     print df.head()
     print df.shape
     if doPlot or outdir:
@@ -160,6 +164,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--nbins', required=False, type=int, default=20)
     parser.add_argument('-l', '--is-long-dur', action='store_true', default=False)
     parser.add_argument('-p', '--plot', action='store_true', default=False)
-    parser.add_argument('-o', '--outdir', type=str, default=None)
+    parser.add_argument('-o', '--outdir', type=str, default=None, help="outdir for mesh plot")
+    parser.add_argument('-g', '--outdir-trials', type=str, default=None, help="outdir for data used")
     args = parser.parse_args()
-    main(vars(args), args.is_long_dur, args.nbins, args.plot, args.outdir)
+    main(vars(args), args.is_long_dur, args.nbins, args.plot, args.outdir, args.outdir_trials)
