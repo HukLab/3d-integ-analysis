@@ -4,8 +4,6 @@
 
 * __data/ (.csv)__ - original data collected from two different experiments
 
-* __notes/ (.md, .txt)__ - miscellaneous scratch notes
-
 ## Data analysis scripts (in bin/)
 
 ### I/O
